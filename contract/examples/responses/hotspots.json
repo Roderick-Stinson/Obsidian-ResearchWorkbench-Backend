@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "hotspots",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "items": [
+    {
+      "id": "x-1850000000000000000",
+      "platform": "X / Twitter",
+      "title": "示例：关于 Harness 与模型配对的讨论",
+      "summary": "示例条目，用于调试前端渲染。",
+      "url": "https://x.com/example/status/1850000000000000000",
+      "author": "example",
+      "publishedAt": "2026-10-26T20:00:00+08:00",
+      "collectedAt": "2026-10-27T01:15:00+08:00",
+      "metrics": {
+        "likes": 120,
+        "reposts": 30,
+        "comments": null
+      },
+      "relatedPapers": [
+        {
+          "id": "arxiv-2610.32131",
+          "title": "轻量级代码智能体 Harness 与模型搭配研究",
+          "url": "https://arxiv.org/abs/2610.32131"
+        }
+      ]
+    }
+  ]
+}

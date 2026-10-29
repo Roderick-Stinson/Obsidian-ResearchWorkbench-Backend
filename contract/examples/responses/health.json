@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "health",
+  "status": "ok",
+  "version": "0.1.0",
+  "time": "2026-10-27T15:39:49+08:00",
+  "taskTypes": [
+    "claim-run",
+    "rebuild-interests"
+  ]
+}

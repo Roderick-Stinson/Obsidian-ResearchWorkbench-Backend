@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/llm-settings.schema.json",
+  "title": "大模型引擎设置",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "llm-settings"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "engine": {
+          "enum": [
+            "claude-code",
+            "codex",
+            "deepseek"
+          ]
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "engines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "enum": [
+                  "claude-code",
+                  "codex",
+                  "deepseek"
+                ]
+              },
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "defaultModel": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "key",
+              "name",
+              "ready",
+              "detail",
+              "model",
+              "defaultModel"
+            ]
+          }
+        }
+      },
+      "required": [
+        "engine",
+        "updatedAt",
+        "engines"
+      ]
+    }
+  ]
+}

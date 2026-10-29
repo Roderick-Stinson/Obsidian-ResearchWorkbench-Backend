@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/common.schema.json",
+  "title": "公共定义",
+  "$defs": {
+    "Text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "Month": {
+      "type": "string",
+      "pattern": "^\\d{4}(-\\d{2})?$"
+    },
+    "DateTime": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "Url": {
+      "type": "string",
+      "pattern": "^https?://"
+    },
+    "PaperId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*-[A-Za-z0-9._-]+$"
+    },
+    "PaperRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/PaperId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "$ref": "common.schema.json#/$defs/Text"
+        },
+        "url": {
+          "$ref": "common.schema.json#/$defs/Url"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ]
+    },
+    "Period": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "$ref": "common.schema.json#/$defs/Date"
+        },
+        "end": {
+          "$ref": "common.schema.json#/$defs/Date"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ]
+    },
+    "PaperUser": {
+      "type": "object",
+      "properties": {
+        "paperId": {
+          "$ref": "common.schema.json#/$defs/PaperId"
+        },
+        "rating": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "已读",
+              "收藏",
+              "复现"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "relevance": {
+          "anyOf": [
+            {
+              "enum": [
+                "相关",
+                "不相关"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "watched": {
+          "type": "boolean"
+        },
+        "own": {
+          "type": "boolean"
+        },
+        "discussionStatus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paperId",
+        "rating",
+        "flags",
+        "relevance",
+        "watched",
+        "own",
+        "discussionStatus",
+        "updatedAt"
+      ]
+    },
+    "Response": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "kind"
+      ]
+    },
+    "Generated": {
+      "type": "object",
+      "properties": {
+        "generatedAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "runId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "generatedAt"
+      ]
+    }
+  }
+}

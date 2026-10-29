@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/paper-user-patch.schema.json",
+  "title": "修改我对一篇论文的标记",
+  "type": "object",
+  "properties": {
+    "rating": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "已读",
+          "收藏",
+          "复现"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "relevance": {
+      "anyOf": [
+        {
+          "enum": [
+            "相关",
+            "不相关"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "watched": {
+      "type": "boolean"
+    },
+    "own": {
+      "type": "boolean"
+    },
+    "discussionStatus": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [],
+  "additionalProperties": false,
+  "minProperties": 1
+}

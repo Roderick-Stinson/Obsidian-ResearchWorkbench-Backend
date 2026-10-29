@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/preferences-put.schema.json",
+  "title": "设置推荐偏好",
+  "type": "object",
+  "properties": {
+    "needCode": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "needCode"
+  ],
+  "additionalProperties": false
+}

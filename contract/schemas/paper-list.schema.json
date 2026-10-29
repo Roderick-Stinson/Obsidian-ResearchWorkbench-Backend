@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/paper-list.schema.json",
+  "title": "论文列表",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "paper-list"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/PaperId"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "titleZh": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "firstAuthor": {
+                "type": "string"
+              },
+              "year": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "venue": {
+                "type": "string"
+              },
+              "publicationStatus": {
+                "enum": [
+                  "已发表",
+                  "已录用",
+                  "投稿中",
+                  "预印本",
+                  "待核实"
+                ]
+              },
+              "hasPdf": {
+                "type": "boolean"
+              },
+              "citations": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "updatedAt": {
+                    "anyOf": [
+                      {
+                        "$ref": "common.schema.json#/$defs/DateTime"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "count",
+                  "updatedAt"
+                ]
+              },
+              "summary": {
+                "type": "string"
+              },
+              "urls": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "anyOf": [
+                      {
+                        "$ref": "common.schema.json#/$defs/Url"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pdf": {
+                    "anyOf": [
+                      {
+                        "$ref": "common.schema.json#/$defs/Url"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "code": {
+                    "anyOf": [
+                      {
+                        "$ref": "common.schema.json#/$defs/Url"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "source",
+                  "pdf",
+                  "code"
+                ]
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
+              },
+              "libraryRelevance": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "core",
+                      "related"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "user": {
+                "$ref": "common.schema.json#/$defs/PaperUser"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "titleZh",
+              "firstAuthor",
+              "year",
+              "venue",
+              "publicationStatus",
+              "hasPdf",
+              "citations",
+              "summary",
+              "urls",
+              "topics",
+              "libraryRelevance",
+              "user"
+            ]
+          }
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "facets": {
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "label",
+                  "count"
+                ]
+              }
+            },
+            "venue": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "label",
+                  "count"
+                ]
+              }
+            },
+            "year": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "label",
+                  "count"
+                ]
+              }
+            },
+            "status": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "label",
+                  "count"
+                ]
+              }
+            },
+            "relevance": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "label",
+                  "count"
+                ]
+              }
+            }
+          },
+          "required": [
+            "topic",
+            "venue",
+            "year",
+            "status",
+            "relevance"
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "nextCursor",
+        "total"
+      ]
+    }
+  ]
+}

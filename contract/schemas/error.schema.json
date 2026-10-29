@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/error.schema.json",
+  "title": "错误",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "error"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "enum": [
+                "invalid_params",
+                "unauthorized",
+                "not_found",
+                "conflict",
+                "unavailable",
+                "internal"
+              ]
+            },
+            "message": {
+              "$ref": "common.schema.json#/$defs/Text"
+            },
+            "details": {}
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      },
+      "required": [
+        "error"
+      ]
+    }
+  ]
+}

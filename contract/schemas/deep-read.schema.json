@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/deep-read.schema.json",
+  "title": "AI 精读",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "deep-read"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "paperId": {
+          "$ref": "common.schema.json#/$defs/PaperId"
+        },
+        "markdown": {
+          "$ref": "common.schema.json#/$defs/Text"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/PaperRef"
+          }
+        }
+      },
+      "required": [
+        "paperId",
+        "markdown",
+        "sources"
+      ]
+    }
+  ]
+}

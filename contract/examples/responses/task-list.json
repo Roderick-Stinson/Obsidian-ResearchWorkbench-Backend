@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "task-list",
+  "items": [
+    {
+      "schemaVersion": 1,
+      "kind": "task",
+      "id": "task-20261027T153000-a1b2c3",
+      "type": "deep-read",
+      "params": {
+        "paperId": "arxiv-2610.17613"
+      },
+      "status": "running",
+      "createdAt": "2026-10-27T15:30:00+08:00",
+      "updatedAt": "2026-10-27T15:42:05+08:00",
+      "progress": {
+        "done": 2,
+        "total": 5,
+        "message": "正在读第 3 节"
+      },
+      "message": "",
+      "outputs": [],
+      "error": null
+    }
+  ]
+}

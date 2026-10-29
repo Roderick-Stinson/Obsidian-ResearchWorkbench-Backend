@@ -1,0 +1,50 @@
+{
+  "overview": "（示例）关注多智能体架构的自动设计与优化。",
+  "basis": {
+    "ownPapers": 0,
+    "watchedPapers": 1,
+    "relevantPapers": 0
+  },
+  "domains": [
+    {
+      "label": "多智能体系统",
+      "summary": "示例一级关键词",
+      "evidence": [
+        {
+          "kind": "paper",
+          "ref": "openreview-imcyVlzpXh",
+          "title": "MaAS",
+          "quote": null
+        }
+      ],
+      "children": [
+        {
+          "label": "多智能体架构搜索",
+          "summary": "示例二级关键词",
+          "evidence": [
+            {
+              "kind": "paper",
+              "ref": "openreview-imcyVlzpXh",
+              "title": "MaAS",
+              "quote": null
+            }
+          ],
+          "children": [
+            {
+              "label": "查询自适应的超网采样",
+              "summary": "示例三级关键词",
+              "evidence": [
+                {
+                  "kind": "paper",
+                  "ref": "openreview-imcyVlzpXh",
+                  "title": "MaAS",
+                  "quote": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

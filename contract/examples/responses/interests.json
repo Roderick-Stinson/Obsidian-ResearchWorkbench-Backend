@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "kind": "interests",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "overview": "（示例）研究概述。",
+  "basis": {
+    "ownPapers": 1,
+    "watchedPapers": 1,
+    "relevantPapers": 1
+  },
+  "stale": false,
+  "domains": [
+    {
+      "id": "kw-mas",
+      "label": "多智能体系统",
+      "summary": "你设定的一级领域",
+      "origin": "user",
+      "pinned": false,
+      "evidence": [],
+      "children": [
+        {
+          "id": "kw-arch-search",
+          "label": "多智能体架构搜索",
+          "summary": "示例二级关键词",
+          "origin": "extracted",
+          "pinned": false,
+          "evidence": [
+            {
+              "kind": "paper",
+              "ref": "openreview-AbCdEf1234",
+              "title": "（示例）我的投稿",
+              "quote": "（示例：论文中的原文摘录）"
+            },
+            {
+              "kind": "paper",
+              "ref": "openreview-imcyVlzpXh",
+              "title": "MaAS",
+              "quote": null
+            }
+          ],
+          "children": [
+            {
+              "id": "kw-opt-explain",
+              "label": "优化过程的可解释性",
+              "summary": "示例三级关键词",
+              "origin": "extracted",
+              "pinned": true,
+              "evidence": [
+                {
+                  "kind": "paper",
+                  "ref": "openreview-AbCdEf1234",
+                  "title": "（示例）我的投稿",
+                  "quote": "（示例：论文中的原文摘录）"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "cand-harness",
+      "parentId": "kw-mas",
+      "level": 2,
+      "label": "Agent Harness 设计与评测",
+      "reason": "近 30 天该方向论文数增长明显，你的关键词树里还没有",
+      "growth": {
+        "paperCount": 23,
+        "windowDays": 30,
+        "changePct": 120
+      },
+      "examples": [
+        {
+          "id": "arxiv-2610.32131",
+          "title": "轻量级代码智能体 Harness 与模型搭配研究",
+          "url": "https://arxiv.org/abs/2610.32131"
+        }
+      ]
+    }
+  ]
+}

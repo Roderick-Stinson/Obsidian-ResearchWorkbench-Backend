@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "kind": "map",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "intro": "多智能体架构优化从 2023 年基于人工规则与固定角色扮演的 SOP 启发式协作起步，逐步演进为将交互过程形式化为计算图并利用自动化搜索算法寻找最优拓扑。",
+  "stages": [
+    {
+      "period": "2024",
+      "title": "计算图形式化与自动化架构搜索",
+      "description": "架构设计转向将多智能体系统抽象为可优化的计算图拓扑。",
+      "milestones": [
+        {
+          "date": "2024-02",
+          "venue": "ICML",
+          "paper": {
+            "id": null,
+            "title": "GPTSwarm"
+          },
+          "text": "GPTSwarm 将智能体建模为可优化计算图"
+        }
+      ]
+    }
+  ],
+  "trends": [
+    {
+      "direction": "多智能体联合 RL 后训练",
+      "trend": "up",
+      "changePct": 64,
+      "windowDays": 90,
+      "paperCount": 27,
+      "note": "增速最快"
+    }
+  ],
+  "benchmarksAndBaselines": [
+    {
+      "name": "AFlow",
+      "kind": "baseline",
+      "usedByCount": 53,
+      "note": "最强工作流搜索基线之一"
+    }
+  ],
+  "gaps": [
+    {
+      "title": "失败归因",
+      "kind": "gap",
+      "metric": "仅 4 篇",
+      "note": "很少有工作分析某个架构为什么在某类题上失败",
+      "sources": []
+    }
+  ],
+  "categories": [
+    {
+      "routeKey": "static-sop",
+      "name": "静态分工与 SOP 工作流",
+      "paperCount": 418,
+      "note": "预定义角色与流程"
+    }
+  ],
+  "hotspots": {
+    "source": "arXiv 计算机类、标题或摘要含 agent 的论文（不限是否中稿）",
+    "months": [
+      "2026-07",
+      "2026-08",
+      "2026-09"
+    ],
+    "totals": [
+      2600,
+      2800,
+      3000
+    ],
+    "items": [
+      {
+        "name": "Agent Skills",
+        "summary": "把可复用的能力打包成技能，按需加载给智能体。",
+        "terms": [
+          "agent skills",
+          "skill library"
+        ],
+        "counts": [
+          40,
+          66,
+          95
+        ],
+        "onset": "2026-07",
+        "peak": "2026-09",
+        "recentSharePct": 2.4,
+        "examples": [
+          {
+            "id": "arxiv-2609.01234",
+            "title": "SkillBench",
+            "url": "https://arxiv.org/abs/2609.01234"
+          }
+        ]
+      }
+    ]
+  }
+}

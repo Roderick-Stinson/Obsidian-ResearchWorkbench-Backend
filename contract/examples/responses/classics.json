@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "kind": "classics",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "rules": {
+    "libraryCitationMin": 8,
+    "libraryPapers": 989,
+    "mustReadCount": 30
+  },
+  "factsUpdatedAt": "2026-10-25T21:44:00+08:00",
+  "startHere": [
+    {
+      "paper": {
+        "id": null,
+        "title": "MetaGPT"
+      },
+      "date": "2023-08",
+      "venue": "ICLR",
+      "why": "多智能体架构研究的标准起点，理解 SOP 和消息池机制是看懂后续工作的基础。"
+    }
+  ],
+  "routes": [
+    {
+      "key": "static-sop",
+      "name": "静态分工与 SOP 工作流",
+      "intro": "早期系统通过预定义角色提示词与 SOP 规范协作。",
+      "items": [
+        {
+          "paper": {
+            "id": null,
+            "title": "CAMEL"
+          },
+          "date": "2023-03",
+          "venue": "NeurIPS",
+          "role": "开创",
+          "evidence": {
+            "libraryCitations": 13,
+            "citations": 2053,
+            "baselineCount": null,
+            "githubStars": 17880,
+            "codeUrl": "https://github.com/camel-ai/camel"
+          }
+        },
+        {
+          "paper": {
+            "id": null,
+            "title": "MetaGPT"
+          },
+          "date": "2023-08",
+          "venue": "ICLR",
+          "role": "奠基",
+          "evidence": {
+            "libraryCitations": 37,
+            "citations": null,
+            "baselineCount": null,
+            "githubStars": null,
+            "codeUrl": null
+          }
+        }
+      ]
+    }
+  ],
+  "mustRead": [
+    {
+      "paper": {
+        "id": null,
+        "title": "Graph-of-Agents：通过图结构与双向消息传递使 3 个 Agent 超越 6 个 Agent 的 MoA 基线"
+      },
+      "date": "2026-04",
+      "period": "2026 年新作",
+      "venue": "ICLR",
+      "venueTier": "CCF-A 会议",
+      "why": "论文库里 4 篇论文引用了它",
+      "evidence": {
+        "libraryCitations": 4,
+        "citations": null,
+        "baselineCount": null,
+        "githubStars": 53,
+        "codeUrl": null
+      }
+    }
+  ]
+}

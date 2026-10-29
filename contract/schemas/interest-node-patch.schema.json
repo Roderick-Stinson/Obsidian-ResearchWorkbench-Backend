@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/interest-node-patch.schema.json",
+  "title": "修改关键词",
+  "type": "object",
+  "properties": {
+    "label": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "additionalProperties": false,
+  "minProperties": 1
+}

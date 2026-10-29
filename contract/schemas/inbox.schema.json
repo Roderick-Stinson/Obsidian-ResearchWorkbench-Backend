@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/inbox.schema.json",
+  "title": "待认领实验运行",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "inbox"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "runId": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "project": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "host": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "startedAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              },
+              "endedAt": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/DateTime"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "durationSec": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "gpu": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "command": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "cwd": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "running",
+                  "finished",
+                  "failed"
+                ]
+              },
+              "exitCode": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "logPath": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "claimedBy": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "paper",
+                          "reproGroup",
+                          "experimentNote"
+                        ]
+                      },
+                      "id": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "id"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "runId",
+              "project",
+              "host",
+              "startedAt",
+              "endedAt",
+              "durationSec",
+              "gpu",
+              "command",
+              "cwd",
+              "status",
+              "exitCode",
+              "logPath",
+              "claimedBy"
+            ]
+          }
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "host": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "command": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "startedAt": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/DateTime"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "port": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "host",
+              "command",
+              "startedAt",
+              "port"
+            ]
+          }
+        }
+      },
+      "required": [
+        "runs",
+        "services"
+      ]
+    }
+  ]
+}

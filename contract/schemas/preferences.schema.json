@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/preferences.schema.json",
+  "title": "推荐偏好",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "preferences"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "needCode": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "needCode",
+        "updatedAt"
+      ]
+    }
+  ]
+}

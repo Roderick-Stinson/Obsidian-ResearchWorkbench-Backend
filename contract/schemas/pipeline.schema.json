@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/pipeline.schema.json",
+  "title": "流水线状态",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "pipeline"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "schedule": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "when": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "what": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "panel": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "when",
+              "what",
+              "panel"
+            ]
+          }
+        },
+        "latestRun": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "runId": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                },
+                "date": {
+                  "$ref": "common.schema.json#/$defs/Date"
+                },
+                "status": {
+                  "enum": [
+                    "running",
+                    "ok",
+                    "partial",
+                    "failed"
+                  ]
+                },
+                "startedAt": {
+                  "$ref": "common.schema.json#/$defs/DateTime"
+                },
+                "finishedAt": {
+                  "anyOf": [
+                    {
+                      "$ref": "common.schema.json#/$defs/DateTime"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "enum": [
+                          "fetch",
+                          "version-check",
+                          "classify",
+                          "skim",
+                          "recommend",
+                          "pick",
+                          "deep-read",
+                          "results",
+                          "map",
+                          "must-read",
+                          "classics",
+                          "interests",
+                          "research-lines",
+                          "hotspots",
+                          "report",
+                          "push"
+                        ]
+                      },
+                      "name": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "status": {
+                        "enum": [
+                          "pending",
+                          "running",
+                          "ok",
+                          "failed",
+                          "skipped"
+                        ]
+                      },
+                      "startedAt": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/DateTime"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "finishedAt": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/DateTime"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "attempts": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "error": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "name",
+                      "status",
+                      "startedAt",
+                      "finishedAt",
+                      "attempts",
+                      "error"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "runId",
+                "date",
+                "status",
+                "startedAt",
+                "finishedAt",
+                "steps"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attention": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "source": {
+                "enum": [
+                  "pipeline",
+                  "experiment",
+                  "ingest",
+                  "task"
+                ]
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "warn",
+                  "error"
+                ]
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "since": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              },
+              "link": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "source",
+              "severity",
+              "title",
+              "summary",
+              "since",
+              "link"
+            ]
+          }
+        }
+      },
+      "required": [
+        "schedule",
+        "latestRun",
+        "attention"
+      ]
+    }
+  ]
+}

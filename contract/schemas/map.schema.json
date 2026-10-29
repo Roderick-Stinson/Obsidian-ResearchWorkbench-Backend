@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/map.schema.json",
+  "title": "领域发展史",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "map"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "intro": {
+          "$ref": "common.schema.json#/$defs/Text"
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "period": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "description": {
+                "type": "string"
+              },
+              "milestones": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "$ref": "common.schema.json#/$defs/Month"
+                    },
+                    "venue": {
+                      "type": "string"
+                    },
+                    "paper": {
+                      "$ref": "common.schema.json#/$defs/PaperRef"
+                    },
+                    "text": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "venue",
+                    "paper",
+                    "text"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "period",
+              "title",
+              "description",
+              "milestones"
+            ]
+          }
+        },
+        "trends": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "direction": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "trend": {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ]
+              },
+              "changePct": {
+                "type": "number"
+              },
+              "windowDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "paperCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "direction",
+              "trend",
+              "changePct",
+              "windowDays",
+              "paperCount",
+              "note"
+            ]
+          }
+        },
+        "benchmarksAndBaselines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "kind": {
+                "enum": [
+                  "benchmark",
+                  "baseline"
+                ]
+              },
+              "usedByCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "usedByCount",
+              "note"
+            ]
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "kind": {
+                "enum": [
+                  "gap",
+                  "finding"
+                ]
+              },
+              "metric": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/PaperRef"
+                }
+              }
+            },
+            "required": [
+              "title",
+              "kind",
+              "metric",
+              "note",
+              "sources"
+            ]
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "routeKey": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "paperCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "routeKey",
+              "name",
+              "paperCount",
+              "note"
+            ]
+          }
+        },
+        "hotspots": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "$ref": "common.schema.json#/$defs/Text"
+            },
+            "months": {
+              "type": "array",
+              "items": {
+                "$ref": "common.schema.json#/$defs/Month"
+              }
+            },
+            "totals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "terms": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    }
+                  },
+                  "counts": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "onset": {
+                    "$ref": "common.schema.json#/$defs/Month"
+                  },
+                  "peak": {
+                    "$ref": "common.schema.json#/$defs/Month"
+                  },
+                  "recentSharePct": {
+                    "type": "number"
+                  },
+                  "examples": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/PaperRef"
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "summary",
+                  "terms",
+                  "counts",
+                  "onset",
+                  "peak",
+                  "recentSharePct",
+                  "examples"
+                ]
+              }
+            }
+          },
+          "required": [
+            "source",
+            "months",
+            "totals",
+            "items"
+          ]
+        }
+      },
+      "required": [
+        "intro",
+        "stages",
+        "trends",
+        "benchmarksAndBaselines",
+        "gaps",
+        "categories"
+      ]
+    }
+  ]
+}

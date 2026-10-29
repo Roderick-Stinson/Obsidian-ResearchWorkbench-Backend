@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/llm-settings-put.schema.json",
+  "title": "切换大模型引擎",
+  "type": "object",
+  "properties": {
+    "engine": {
+      "enum": [
+        "claude-code",
+        "codex",
+        "deepseek"
+      ]
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "engine"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "kind": "brief",
+  "generatedAt": "2026-10-27T15:50:48+08:00",
+  "runId": "run-2026-10-27",
+  "date": "2026-10-27",
+  "updatedAt": "2026-10-27T15:39:49+08:00",
+  "newCount": 16,
+  "pickedCount": 0,
+  "summary": "2026-10-27 工作台新收录 16 篇方向相关论文，今日精选 0 篇。下面按通信可靠性、模型与执行框架配对、工具与推理成本整理线索；论文描述来自工作台速读。",
+  "highlights": [
+    {
+      "title": "通信可靠性与失败恢复",
+      "text": "新论文聚焦多智能体通信中的纠错与恢复，以及异步执行时的成功率下降，提示需要同时关注交互过程、故障检测和动态重规划。",
+      "sources": [
+        {
+          "id": "arxiv-2610.32060",
+          "title": "多智能体通信失败分析：94.9% 失败轨迹源于恢复/纠错机制失效而非首轮单点错误",
+          "url": "https://arxiv.org/abs/2610.32060"
+        },
+        {
+          "id": "arxiv-2610.32429",
+          "title": "Async-RBench 揭示 LLM 智能体异步执行困境：异步投递下成功率平均下降 3.7 点，DRS 仅 19.2–45.1",
+          "url": "https://arxiv.org/abs/2610.32429"
+        }
+      ]
+    },
+    {
+      "title": "模型与 Harness 的组合影响",
+      "text": "两项评测分别从代码智能体和跨模型基准出发，发现模型与执行框架的配对会明显改变任务表现；比较方法时需要固定或明确报告 Harness。",
+      "sources": [
+        {
+          "id": "arxiv-2610.32131",
+          "title": "轻量级代码智能体 Harness 与模型搭配研究：同模型不同 Harness 解决率相差可达 44 个百分点",
+          "url": "https://arxiv.org/abs/2610.32131"
+        },
+        {
+          "id": "arxiv-2610.32483",
+          "title": "智能体评测解耦模型与Harness：OpenCode跨模型Fit达87.48居首，Harness更换可导致基准排名完全反转",
+          "url": "https://arxiv.org/abs/2610.32483"
+        }
+      ]
+    },
+    {
+      "title": "工具容错与推理成本",
+      "text": "一项故障注入研究关注工具故障下的智能体性能，另一项工作尝试复用执行决策以减少重复推理；两者分别对应可靠性与效率。",
+      "sources": [
+        {
+          "id": "arxiv-2610.32555",
+          "title": "真实 MCP 工具故障下大模型智能体质量骤降 60%，模型参数规模无法提升容错性",
+          "url": "https://arxiv.org/abs/2610.32555"
+        },
+        {
+          "id": "arxiv-2610.32813",
+          "title": "HarnessMM：通过受保护的决策复用在 HumanEval 上将 DeepSeek Harness Token 消耗降低 87.93%",
+          "url": "https://arxiv.org/abs/2610.32813"
+        }
+      ]
+    }
+  ],
+  "picks": [],
+  "todayNew": [
+    {
+      "id": "arxiv-2610.32060",
+      "title": "多智能体通信失败分析：94.9% 失败轨迹源于恢复/纠错机制失效而非首轮单点错误",
+      "summary": "构建了包含 6 大类、24 子类的多智能体通信失败分类体系，分析 3,211 条失败轨迹并提出提前一轮预警错误的 Trigger 模型（AUROC 达 0.75–0.96）。",
+      "publishedAt": "2026-10-23",
+      "url": "https://arxiv.org/abs/2610.32060"
+    },
+    {
+      "id": "arxiv-2610.32131",
+      "title": "轻量级代码智能体 Harness 与模型搭配研究：同模型不同 Harness 解决率相差可达 44 个百分点",
+      "summary": "对 3 款轻量级代码开源模型与 6 款开源 Agent Harness 进行 18 组全因子评测（100 道 SWE-bench Verified 题目），发现同一模型跨 Harness 解决率差异高达 44%，Token 效率差异超 20 倍。",
+      "publishedAt": "2026-10-23",
+      "url": "https://arxiv.org/abs/2610.32131"
+    },
+    {
+      "id": "arxiv-2610.32190",
+      "title": "Markets of Minds：事前边际增益与机会成本估算使 30% 共享算力下智能体任务表现提升 11.56 点",
+      "summary": "提出了在执行前联合估算修复收益与倒退风险的认知资源分配框架 Markets of Minds，在 30% 专家算力配额下相比随机分配将任务完成度由 73.86% 提升至 85.42%。",
+      "publishedAt": "2026-10-23",
+      "url": "https://arxiv.org/abs/2610.32190"
+    }
+  ],
+  "weekly": {
+    "period": {
+      "start": "2026-10-19",
+      "end": "2026-10-25"
+    },
+    "summary": "上周的研究脉络集中在 Harness 与工作流自进化、演化增益的归因，以及多智能体通信和协作的脆弱性。部分分析提醒，报告的增益可能受到基准过拟合、测试时算力或采样的影响。",
+    "reportId": "weekly-2026-10-19"
+  }
+}

@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/ideas.schema.json",
+  "title": "IDEA 与研究线",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "ideas"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "topic": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "method": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "gap": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/PaperRef"
+                }
+              }
+            },
+            "required": [
+              "topic",
+              "method",
+              "evidence",
+              "gap",
+              "sources"
+            ]
+          }
+        },
+        "aiIdeas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "summary": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/PaperRef"
+                },
+                "minItems": 1
+              },
+              "generatedAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "summary",
+              "evidence",
+              "sources",
+              "generatedAt"
+            ]
+          }
+        },
+        "discussions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "next": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "summary",
+              "next",
+              "updatedAt"
+            ]
+          }
+        },
+        "researchLines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^line-[a-z0-9-]+$"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "推进中",
+                  "暂停",
+                  "已放弃",
+                  "已转论文"
+                ]
+              },
+              "startedAt": {
+                "$ref": "common.schema.json#/$defs/Date"
+              },
+              "stepCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reviewCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "question": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "draft": {
+                "type": "string"
+              },
+              "review": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "mean": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "importance": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "novelty": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "depth": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "feasibility": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "mean",
+                      "importance",
+                      "novelty",
+                      "depth",
+                      "feasibility",
+                      "note"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "nextSteps": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "tag",
+              "status",
+              "startedAt",
+              "stepCount",
+              "reviewCount",
+              "question",
+              "draft",
+              "review",
+              "nextSteps"
+            ]
+          }
+        }
+      },
+      "required": [
+        "methods",
+        "aiIdeas",
+        "discussions",
+        "researchLines"
+      ]
+    }
+  ]
+}

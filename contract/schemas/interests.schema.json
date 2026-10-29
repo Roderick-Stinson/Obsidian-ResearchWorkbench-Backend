@@ -1,0 +1,389 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/interests.schema.json",
+  "title": "研究兴趣关键词树",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "interests"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "object",
+          "properties": {
+            "ownPapers": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "watchedPapers": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "relevantPapers": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "ownPapers",
+            "watchedPapers",
+            "relevantPapers"
+          ]
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "label": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "origin": {
+                "enum": [
+                  "user",
+                  "extracted",
+                  "candidate"
+                ]
+              },
+              "pinned": {
+                "type": "boolean"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "paper"
+                      ]
+                    },
+                    "ref": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "title": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "quote": {
+                      "anyOf": [
+                        {
+                          "$ref": "common.schema.json#/$defs/Text"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "ref",
+                    "title",
+                    "quote"
+                  ]
+                }
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "label": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "origin": {
+                      "enum": [
+                        "user",
+                        "extracted",
+                        "candidate"
+                      ]
+                    },
+                    "pinned": {
+                      "type": "boolean"
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "paper"
+                            ]
+                          },
+                          "ref": {
+                            "$ref": "common.schema.json#/$defs/Text"
+                          },
+                          "title": {
+                            "$ref": "common.schema.json#/$defs/Text"
+                          },
+                          "quote": {
+                            "anyOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/Text"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "ref",
+                          "title",
+                          "quote"
+                        ]
+                      }
+                    },
+                    "children": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "common.schema.json#/$defs/Text"
+                          },
+                          "label": {
+                            "$ref": "common.schema.json#/$defs/Text"
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "origin": {
+                            "enum": [
+                              "user",
+                              "extracted",
+                              "candidate"
+                            ]
+                          },
+                          "pinned": {
+                            "type": "boolean"
+                          },
+                          "evidence": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "paper"
+                                  ]
+                                },
+                                "ref": {
+                                  "$ref": "common.schema.json#/$defs/Text"
+                                },
+                                "title": {
+                                  "$ref": "common.schema.json#/$defs/Text"
+                                },
+                                "quote": {
+                                  "anyOf": [
+                                    {
+                                      "$ref": "common.schema.json#/$defs/Text"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "ref",
+                                "title",
+                                "quote"
+                              ]
+                            }
+                          },
+                          "children": {
+                            "type": "array",
+                            "maxItems": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "summary",
+                          "origin",
+                          "pinned",
+                          "evidence"
+                        ],
+                        "if": {
+                          "properties": {
+                            "origin": {
+                              "enum": [
+                                "extracted",
+                                "candidate"
+                              ]
+                            }
+                          }
+                        },
+                        "then": {
+                          "properties": {
+                            "evidence": {
+                              "minItems": 1
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "summary",
+                    "origin",
+                    "pinned",
+                    "evidence",
+                    "children"
+                  ],
+                  "if": {
+                    "properties": {
+                      "origin": {
+                        "enum": [
+                          "extracted",
+                          "candidate"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "evidence": {
+                        "minItems": 1
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "summary",
+              "origin",
+              "pinned",
+              "evidence",
+              "children"
+            ],
+            "if": {
+              "properties": {
+                "origin": {
+                  "enum": [
+                    "extracted",
+                    "candidate"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidence": {
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "parentId": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "level": {
+                "enum": [
+                  2,
+                  3
+                ]
+              },
+              "label": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "reason": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "growth": {
+                "type": "object",
+                "properties": {
+                  "paperCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "windowDays": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "changePct": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "paperCount",
+                  "windowDays",
+                  "changePct"
+                ]
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/PaperRef"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "parentId",
+              "level",
+              "label",
+              "reason",
+              "growth",
+              "examples"
+            ]
+          }
+        }
+      },
+      "required": [
+        "overview",
+        "basis",
+        "stale",
+        "domains",
+        "candidates"
+      ]
+    }
+  ]
+}

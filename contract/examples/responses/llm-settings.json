@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "kind": "llm-settings",
+  "engine": "claude-code",
+  "updatedAt": null,
+  "engines": [
+    {
+      "key": "claude-code",
+      "name": "Claude Code（本机命令行）",
+      "ready": true,
+      "detail": "/Users/me/.local/bin/claude",
+      "model": null,
+      "defaultModel": null
+    },
+    {
+      "key": "codex",
+      "name": "Codex CLI（本机命令行）",
+      "ready": false,
+      "detail": "没找到 codex 命令；安装 Codex CLI，或用 PWB_CODEX_BIN 指定路径",
+      "model": null,
+      "defaultModel": null
+    },
+    {
+      "key": "deepseek",
+      "name": "DeepSeek API",
+      "ready": false,
+      "detail": "没有 API key；设置环境变量 DEEPSEEK_API_KEY，或写入 data/secrets.json 的 deepseekApiKey",
+      "model": "deepseek-chat",
+      "defaultModel": "deepseek-chat"
+    }
+  ]
+}

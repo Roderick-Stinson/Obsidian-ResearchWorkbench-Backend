@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "ideas",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "methods": [
+    {
+      "topic": "多智能体优化过程的可解释性",
+      "method": "节点级效用量化",
+      "evidence": "MAS-Gate 在设计期与事后归因中使用节点效用",
+      "gap": "尚无对搜索轨迹本身的解释",
+      "sources": [
+        {
+          "id": "arxiv-2610.17613",
+          "title": "MAS-Gate",
+          "url": "https://arxiv.org/abs/2610.17613"
+        }
+      ]
+    }
+  ],
+  "aiIdeas": [],
+  "discussions": [],
+  "researchLines": [
+    {
+      "id": "line-conservecut",
+      "title": "ConserveCut：以语义守恒率搜索多智能体分解边界",
+      "tag": "领域开放问题",
+      "status": "推进中",
+      "startedAt": "2026-10-14",
+      "stepCount": 6,
+      "reviewCount": 1,
+      "question": "多智能体任务分解的交接边界会系统性丢失已发现事实，层级越深越损害最终有效信息",
+      "draft": "CutLedger：带 Replay Certificate 的多智能体边界风险账本。",
+      "review": {
+        "mean": 6.0,
+        "importance": 8,
+        "novelty": 6,
+        "depth": 6,
+        "feasibility": 4,
+        "note": ""
+      },
+      "nextSteps": [
+        "冻结并写入预注册：baseline A0、唯一 candidate boundary move A1"
+      ]
+    }
+  ]
+}

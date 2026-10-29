@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/idea-notes.schema.json",
+  "title": "IDEA 批注",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "idea-notes"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^line-[a-z0-9-]+$"
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/Text"
+          }
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "notes",
+        "updatedAt"
+      ]
+    }
+  ]
+}

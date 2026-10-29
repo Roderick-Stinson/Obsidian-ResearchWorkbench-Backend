@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/classics.schema.json",
+  "title": "经典与必读",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "classics"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "object",
+          "properties": {
+            "libraryCitationMin": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "libraryPapers": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "mustReadCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "libraryCitationMin",
+            "libraryPapers",
+            "mustReadCount"
+          ]
+        },
+        "factsUpdatedAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "startHere": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "paper": {
+                "$ref": "common.schema.json#/$defs/PaperRef"
+              },
+              "date": {
+                "$ref": "common.schema.json#/$defs/Month"
+              },
+              "venue": {
+                "type": "string"
+              },
+              "why": {
+                "$ref": "common.schema.json#/$defs/Text"
+              }
+            },
+            "required": [
+              "paper",
+              "date",
+              "venue",
+              "why"
+            ]
+          }
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "intro": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "paper": {
+                      "$ref": "common.schema.json#/$defs/PaperRef"
+                    },
+                    "date": {
+                      "$ref": "common.schema.json#/$defs/Month"
+                    },
+                    "venue": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "enum": [
+                        "开创",
+                        "奠基",
+                        "代表"
+                      ]
+                    },
+                    "why": {
+                      "type": "string"
+                    },
+                    "evidence": {
+                      "type": "object",
+                      "properties": {
+                        "libraryCitations": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "citations": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "baselineCount": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "githubStars": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "codeUrl": {
+                          "anyOf": [
+                            {
+                              "$ref": "common.schema.json#/$defs/Url"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "libraryCitations",
+                        "citations",
+                        "baselineCount",
+                        "githubStars",
+                        "codeUrl"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "paper",
+                    "date",
+                    "venue",
+                    "role",
+                    "evidence"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "key",
+              "name",
+              "intro",
+              "items"
+            ]
+          }
+        },
+        "mustRead": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "paper": {
+                "$ref": "common.schema.json#/$defs/PaperRef"
+              },
+              "date": {
+                "$ref": "common.schema.json#/$defs/Month"
+              },
+              "period": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "venue": {
+                "type": "string"
+              },
+              "venueTier": {
+                "enum": [
+                  "CCF-A 会议",
+                  "CCF-A 期刊",
+                  "其他"
+                ]
+              },
+              "why": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "evidence": {
+                "type": "object",
+                "properties": {
+                  "libraryCitations": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "citations": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "baselineCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "githubStars": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "codeUrl": {
+                    "anyOf": [
+                      {
+                        "$ref": "common.schema.json#/$defs/Url"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "libraryCitations",
+                  "citations",
+                  "baselineCount",
+                  "githubStars",
+                  "codeUrl"
+                ]
+              }
+            },
+            "required": [
+              "paper",
+              "date",
+              "venue",
+              "venueTier",
+              "why",
+              "evidence"
+            ]
+          }
+        }
+      },
+      "required": [
+        "rules",
+        "factsUpdatedAt",
+        "startHere",
+        "routes",
+        "mustRead"
+      ]
+    }
+  ]
+}

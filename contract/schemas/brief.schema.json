@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/brief.schema.json",
+  "title": "每日简报",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "brief"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "date": {
+          "$ref": "common.schema.json#/$defs/Date"
+        },
+        "updatedAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "newCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pickedCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "summary": {
+          "type": "string"
+        },
+        "highlights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "text": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/PaperRef"
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "title",
+              "text",
+              "sources"
+            ]
+          }
+        },
+        "picks": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "common.schema.json#/$defs/PaperId"
+                  },
+                  "title": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "publishedAt": {
+                    "anyOf": [
+                      {
+                        "$ref": "common.schema.json#/$defs/Date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "url": {
+                    "$ref": "common.schema.json#/$defs/Url"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "summary",
+                  "publishedAt"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            ]
+          },
+          "maxItems": 10
+        },
+        "todayNew": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/PaperId"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "publishedAt": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/Date"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "url": {
+                "$ref": "common.schema.json#/$defs/Url"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "summary",
+              "publishedAt"
+            ]
+          }
+        },
+        "weekly": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "period": {
+                  "$ref": "common.schema.json#/$defs/Period"
+                },
+                "summary": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                },
+                "reportId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "period",
+                "summary",
+                "reportId"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "date",
+        "updatedAt",
+        "newCount",
+        "pickedCount",
+        "summary",
+        "highlights",
+        "picks",
+        "todayNew",
+        "weekly"
+      ]
+    }
+  ]
+}

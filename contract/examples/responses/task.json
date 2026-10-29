@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "task",
+  "id": "task-20261027T153000-a1b2c3",
+  "type": "deep-read",
+  "params": {
+    "paperId": "arxiv-2610.17613"
+  },
+  "status": "done",
+  "createdAt": "2026-10-27T15:30:00+08:00",
+  "updatedAt": "2026-10-27T15:42:05+08:00",
+  "progress": null,
+  "message": "精读已完成",
+  "outputs": [
+    {
+      "kind": "deep-read",
+      "path": "/papers/arxiv-2610.17613/deep-read"
+    }
+  ],
+  "error": null
+}

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/reports-index.schema.json",
+  "title": "报告目录",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "reports-index"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "reports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^(weekly-\\d{4}-\\d{2}-\\d{2}|monthly-\\d{4}-\\d{2})$"
+              },
+              "type": {
+                "enum": [
+                  "weekly",
+                  "monthly"
+                ]
+              },
+              "period": {
+                "$ref": "common.schema.json#/$defs/Period"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "generatedAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "period",
+              "title",
+              "generatedAt"
+            ]
+          }
+        },
+        "topPapers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "paper": {
+                "$ref": "common.schema.json#/$defs/PaperRef"
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "paper",
+              "score",
+              "reason"
+            ]
+          }
+        }
+      },
+      "required": [
+        "reports",
+        "topPapers"
+      ]
+    }
+  ]
+}

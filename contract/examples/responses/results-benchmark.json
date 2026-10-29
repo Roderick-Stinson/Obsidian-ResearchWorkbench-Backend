@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "kind": "results-benchmark",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "benchmark": {
+    "key": "gsm8k",
+    "name": "GSM8K",
+    "category": "数学",
+    "split": "test",
+    "fullSize": 1319,
+    "metric": {
+      "name": "Accuracy",
+      "higherIsBetter": true
+    }
+  },
+  "stats": {
+    "methodCount": 455,
+    "paperCount": 237
+  },
+  "entries": [
+    {
+      "method": "DenoiseFlow",
+      "paper": {
+        "id": null,
+        "title": "DenoiseFlow"
+      },
+      "value": 99.5,
+      "scale": {
+        "type": "full",
+        "n": 1319
+      },
+      "backboneModel": null,
+      "code": {
+        "status": "anonymous",
+        "url": null,
+        "stars": null
+      },
+      "source": {
+        "type": "original",
+        "paper": {
+          "id": null,
+          "title": "DenoiseFlow"
+        },
+        "quotedFrom": null,
+        "location": "Table 1"
+      },
+      "isAblation": false,
+      "cost": null
+    },
+    {
+      "method": "Fixed-5-round debate",
+      "paper": null,
+      "value": 99,
+      "scale": {
+        "type": "subset",
+        "n": 200
+      },
+      "backboneModel": null,
+      "code": {
+        "status": "unknown",
+        "url": null,
+        "stars": null
+      },
+      "source": {
+        "type": "quoted",
+        "paper": {
+          "id": null,
+          "title": "Wald-SPRT"
+        },
+        "quotedFrom": null,
+        "location": null
+      },
+      "isAblation": false,
+      "cost": {
+        "tokens": null,
+        "usd": null,
+        "llmCalls": 5
+      }
+    }
+  ]
+}

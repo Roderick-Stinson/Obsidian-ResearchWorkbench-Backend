@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/task.schema.json",
+  "title": "后台任务",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "task"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^task-\\d{8}T\\d{6}-[0-9a-f]{6}$"
+        },
+        "type": {
+          "enum": [
+            "deep-read",
+            "generate-report",
+            "rebuild-map",
+            "rebuild-classics",
+            "rebuild-interests",
+            "retry-step",
+            "ingest-paper",
+            "claim-run"
+          ]
+        },
+        "params": {
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "createdAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "updatedAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "done": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "done",
+                "total",
+                "message"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "path": {
+                "type": "string",
+                "pattern": "^/"
+              }
+            },
+            "required": [
+              "kind",
+              "path"
+            ]
+          }
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "params",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "progress",
+        "message",
+        "outputs",
+        "error"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "deep-read"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "paperId": {
+                    "$ref": "common.schema.json#/$defs/PaperId"
+                  }
+                },
+                "required": [
+                  "paperId"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "generate-report"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "weekly",
+                      "monthly"
+                    ]
+                  },
+                  "period": {
+                    "$ref": "common.schema.json#/$defs/Period"
+                  }
+                },
+                "required": [
+                  "type",
+                  "period"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "rebuild-map"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "rebuild-classics"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "rebuild-interests"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "retry-step"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "runId": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "step": {
+                    "enum": [
+                      "fetch",
+                      "version-check",
+                      "classify",
+                      "skim",
+                      "recommend",
+                      "pick",
+                      "deep-read",
+                      "results",
+                      "map",
+                      "must-read",
+                      "classics",
+                      "interests",
+                      "research-lines",
+                      "hotspots",
+                      "report",
+                      "push"
+                    ]
+                  }
+                },
+                "required": [
+                  "runId",
+                  "step"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ingest-paper"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "$ref": "common.schema.json#/$defs/Url"
+                  },
+                  "watch": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "url",
+                  "watch"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "claim-run"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "properties": {
+                  "runId": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "target": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "paper",
+                          "reproGroup",
+                          "experimentNote"
+                        ]
+                      },
+                      "id": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "id"
+                    ]
+                  }
+                },
+                "required": [
+                  "runId",
+                  "target"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

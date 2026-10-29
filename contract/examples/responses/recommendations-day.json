@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "kind": "recommendations-day",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "date": "2026-10-27",
+  "counts": {
+    "core": 1,
+    "adjacent": 1,
+    "trending": 1
+  },
+  "papers": [
+    {
+      "id": "arxiv-2610.17613",
+      "titleZh": "MAS-Gate 通过节点级量化统领多智能体全生命周期，将工作流编排平均表现提升至 44.70%",
+      "titleEn": "MAS-Gate: Unlocking Multi-Agent System Lifecycle via Node-Centric Quantification",
+      "summary": "提出基于节点效用与跨节点传播强度的统一量化方法 MAS-Gate，贯穿设计期编排、运行期干预与事后归因。",
+      "publishedAt": "2026-10-13",
+      "url": "https://arxiv.org/abs/2610.17613",
+      "codeUrl": null,
+      "hfUpvotes": 0,
+      "citations": {
+        "count": 0,
+        "updatedAt": "2026-10-27T01:10:00+08:00"
+      },
+      "quality": {
+        "score": 8.0,
+        "rationale": "设计期、运行期、事后归因三阶段都有实验"
+      },
+      "category": "core",
+      "reason": "命中关键词“优化过程的可解释性”“节点级归因”",
+      "matchedKeywords": [
+        {
+          "nodeId": "kw-opt-explain",
+          "label": "优化过程的可解释性"
+        }
+      ],
+      "score": 0.91,
+      "picked": true,
+      "user": {
+        "paperId": "arxiv-2610.17613",
+        "rating": 0,
+        "flags": [],
+        "relevance": null,
+        "watched": false,
+        "own": false,
+        "discussionStatus": null,
+        "updatedAt": null
+      }
+    },
+    {
+      "id": "arxiv-2610.05284",
+      "titleZh": "DAGO 用上下文老虎机引导的多父代工作流融合将六项基准宏平均分提升至 81.7",
+      "titleEn": "Fusion is the New Mutation: Bandit-Guided Evolution on Workflow Graphs",
+      "summary": "将多父代工作流融合建模为上下文老虎机臂选择问题，在相同验证预算下超越 AFlow。",
+      "publishedAt": "2026-10-04",
+      "url": "https://arxiv.org/abs/2610.05284",
+      "codeUrl": null,
+      "hfUpvotes": 0,
+      "citations": {
+        "count": 2,
+        "updatedAt": "2026-10-27T01:10:00+08:00"
+      },
+      "quality": {
+        "score": 7.3,
+        "rationale": ""
+      },
+      "category": "adjacent",
+      "reason": "引用了你标为相关的 MaAS，但研究的是工作流演化搜索，不在你的关键词里",
+      "matchedKeywords": [],
+      "score": 0.64,
+      "picked": false,
+      "user": {
+        "paperId": "arxiv-2610.05284",
+        "rating": 0,
+        "flags": [],
+        "relevance": null,
+        "watched": false,
+        "own": false,
+        "discussionStatus": null,
+        "updatedAt": null
+      }
+    },
+    {
+      "id": "arxiv-2610.32131",
+      "titleZh": "轻量级代码智能体 Harness 与模型搭配研究：同模型不同 Harness 解决率相差可达 44 个百分点",
+      "titleEn": "Harness Matters: Pairing Lightweight Code Agents with Harnesses",
+      "summary": "对 3 款轻量级代码模型与 6 款开源 Agent Harness 做 18 组全因子评测。",
+      "publishedAt": "2026-10-23",
+      "url": "https://arxiv.org/abs/2610.32131",
+      "codeUrl": null,
+      "hfUpvotes": 21,
+      "citations": {
+        "count": null,
+        "updatedAt": null
+      },
+      "quality": {
+        "score": 7.0,
+        "rationale": ""
+      },
+      "category": "trending",
+      "reason": "一级领域“多智能体系统”内近 7 天讨论量最高的论文之一",
+      "matchedKeywords": [],
+      "score": 0.58,
+      "picked": false,
+      "user": {
+        "paperId": "arxiv-2610.32131",
+        "rating": 0,
+        "flags": [],
+        "relevance": null,
+        "watched": false,
+        "own": false,
+        "discussionStatus": null,
+        "updatedAt": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/hotspots.schema.json",
+  "title": "社区热点",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "hotspots"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "platform": {
+                "enum": [
+                  "X / Twitter",
+                  "微信公众号",
+                  "小红书",
+                  "知乎",
+                  "其他"
+                ]
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "url": {
+                "$ref": "common.schema.json#/$defs/Url"
+              },
+              "author": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "publishedAt": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/DateTime"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "collectedAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              },
+              "metrics": {
+                "type": "object",
+                "properties": {
+                  "likes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "reposts": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "comments": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "likes",
+                  "reposts",
+                  "comments"
+                ]
+              },
+              "relatedPapers": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/PaperRef"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "platform",
+              "title",
+              "summary",
+              "url",
+              "author",
+              "publishedAt",
+              "collectedAt",
+              "metrics",
+              "relatedPapers"
+            ]
+          }
+        }
+      },
+      "required": [
+        "items"
+      ]
+    }
+  ]
+}

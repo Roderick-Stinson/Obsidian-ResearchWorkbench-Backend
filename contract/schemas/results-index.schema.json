@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/results-index.schema.json",
+  "title": "结果表目录",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "results-index"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "enum": [
+                  "数学",
+                  "代码生成",
+                  "问答",
+                  "知识与综合推理",
+                  "智能体 / 交互环境",
+                  "其它"
+                ]
+              },
+              "benchmarks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9-]+$"
+                    },
+                    "name": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "entryCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "name",
+                    "entryCount"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "benchmarks"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories"
+      ]
+    }
+  ]
+}

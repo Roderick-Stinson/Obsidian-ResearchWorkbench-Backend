@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/health.schema.json",
+  "title": "服务状态",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "health"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "degraded"
+          ]
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/Text"
+        },
+        "time": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "taskTypes": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/Text"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "version",
+        "time"
+      ]
+    }
+  ]
+}

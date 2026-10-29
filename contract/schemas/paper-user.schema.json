@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/paper-user.schema.json",
+  "title": "我对一篇论文的标记",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "paper-user"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "paperId": {
+          "$ref": "common.schema.json#/$defs/PaperId"
+        },
+        "rating": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "已读",
+              "收藏",
+              "复现"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "relevance": {
+          "anyOf": [
+            {
+              "enum": [
+                "相关",
+                "不相关"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "watched": {
+          "type": "boolean"
+        },
+        "own": {
+          "type": "boolean"
+        },
+        "discussionStatus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paperId",
+        "rating",
+        "flags",
+        "relevance",
+        "watched",
+        "own",
+        "discussionStatus",
+        "updatedAt"
+      ]
+    }
+  ]
+}

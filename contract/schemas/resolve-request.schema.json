@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/resolve-request.schema.json",
+  "title": "论文 ID 解析请求",
+  "type": "object",
+  "properties": {
+    "ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/PaperId"
+      },
+      "minItems": 1,
+      "maxItems": 500,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "ids"
+  ],
+  "additionalProperties": false
+}

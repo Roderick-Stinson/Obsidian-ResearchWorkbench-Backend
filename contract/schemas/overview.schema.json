@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/overview.schema.json",
+  "title": "论文库统计",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "overview"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "paperTotal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "relevantTotal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "newLast7Days": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastIngestAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paperTotal",
+        "relevantTotal",
+        "newLast7Days",
+        "lastIngestAt"
+      ]
+    }
+  ]
+}

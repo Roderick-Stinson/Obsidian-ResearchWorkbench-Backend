@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/queue-put.schema.json",
+  "title": "设置阅读队列",
+  "type": "object",
+  "properties": {
+    "paperIds": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/PaperId"
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "paperIds"
+  ],
+  "additionalProperties": false
+}

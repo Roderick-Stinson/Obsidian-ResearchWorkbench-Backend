@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "results-index",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "categories": [
+    {
+      "name": "数学",
+      "benchmarks": [
+        {
+          "key": "gsm8k",
+          "name": "GSM8K",
+          "entryCount": 2
+        }
+      ]
+    }
+  ]
+}

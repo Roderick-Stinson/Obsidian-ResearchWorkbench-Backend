@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "kind": "paper-list",
+  "items": [
+    {
+      "id": "openreview-imcyVlzpXh",
+      "title": "Multi-agent Architecture Search via Agentic Supernet",
+      "titleZh": "MaAS：基于智能体超网的多智能体架构搜索",
+      "firstAuthor": "Guibin Zhang",
+      "year": 2025,
+      "venue": "ICML 2025",
+      "publicationStatus": "已发表",
+      "hasPdf": true,
+      "citations": {
+        "count": 120,
+        "updatedAt": "2026-10-27T01:10:00+08:00"
+      },
+      "summary": "把多智能体架构搜索变成在智能体超网上按查询采样子架构。",
+      "urls": {
+        "source": "https://openreview.net/pdf?id=imcyVlzpXh",
+        "pdf": "https://arxiv.org/pdf/2502.04180",
+        "code": "https://github.com/bingreeky/MaAS"
+      },
+      "topics": [
+        "查询自适应DAG架构搜索"
+      ],
+      "libraryRelevance": "core",
+      "user": {
+        "paperId": "openreview-imcyVlzpXh",
+        "rating": 0,
+        "flags": [],
+        "relevance": "相关",
+        "watched": true,
+        "own": false,
+        "discussionStatus": "待讨论",
+        "updatedAt": "2026-10-27T15:39:49+08:00"
+      }
+    }
+  ],
+  "nextCursor": null,
+  "total": 1,
+  "facets": {
+    "topic": [
+      {
+        "label": "查询自适应DAG架构搜索",
+        "count": 1
+      }
+    ],
+    "venue": [
+      {
+        "label": "ICML",
+        "count": 1
+      }
+    ],
+    "year": [
+      {
+        "label": "2025",
+        "count": 1
+      }
+    ],
+    "status": [
+      {
+        "label": "已发表",
+        "count": 1
+      }
+    ],
+    "relevance": [
+      {
+        "label": "core",
+        "count": 1
+      }
+    ]
+  }
+}

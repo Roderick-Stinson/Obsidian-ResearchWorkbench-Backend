@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "jobs",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "items": [
+    {
+      "key": "pdf-download",
+      "name": "下载论文 PDF",
+      "status": "running",
+      "progress": {
+        "done": 482,
+        "total": 989
+      },
+      "message": "论文库 989 篇里 482 篇已有 PDF；没有公开来源 30 篇，被付费墙挡住 29 篇",
+      "updatedAt": "2026-10-27T15:39:49+08:00"
+    },
+    {
+      "key": "dblp-verify",
+      "name": "用 DBLP 核实“待核实”论文",
+      "status": "running",
+      "progress": {
+        "done": 82,
+        "total": 1107
+      },
+      "message": "正在下载 DBLP 整库：82 MB / 约 1107 MB（对方服务器限速）",
+      "updatedAt": "2026-10-27T15:39:49+08:00"
+    }
+  ]
+}

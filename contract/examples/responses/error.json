@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "error",
+  "error": {
+    "code": "not_found",
+    "message": "论文不存在：arxiv-2610.99999"
+  }
+}

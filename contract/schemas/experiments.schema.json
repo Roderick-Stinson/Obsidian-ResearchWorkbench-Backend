@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/experiments.schema.json",
+  "title": "复现配置组",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "experiments"
+        }
+      }
+    },
+    {
+      "$ref": "common.schema.json#/$defs/Generated"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "reproGroups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "paper": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/PaperRef"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "runCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "status": {
+                "enum": [
+                  "复现一致",
+                  "复现差距",
+                  "进行中",
+                  "未开始"
+                ]
+              },
+              "withinTolerance": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "missing": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "worstDiffs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "metric": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "delta": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "metric",
+                    "delta"
+                  ]
+                }
+              },
+              "note": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "paper",
+              "runCount",
+              "status",
+              "withinTolerance",
+              "total",
+              "missing",
+              "worstDiffs",
+              "note",
+              "updatedAt"
+            ]
+          }
+        }
+      },
+      "required": [
+        "reproGroups"
+      ]
+    }
+  ]
+}

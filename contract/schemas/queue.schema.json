@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/queue.schema.json",
+  "title": "阅读队列",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "queue"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "paperIds": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/PaperId"
+          },
+          "uniqueItems": true
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paperIds",
+        "updatedAt"
+      ]
+    }
+  ]
+}

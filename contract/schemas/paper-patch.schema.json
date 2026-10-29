@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/paper-patch.schema.json",
+  "title": "修正论文信息",
+  "type": "object",
+  "properties": {
+    "title": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "titleZh": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "venue": {
+      "type": "string"
+    },
+    "firstAuthor": {
+      "type": "string"
+    },
+    "publicationStatus": {
+      "enum": [
+        "已发表",
+        "已录用",
+        "投稿中",
+        "预印本",
+        "待核实"
+      ]
+    },
+    "year": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1900,
+          "maximum": 2100
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [],
+  "additionalProperties": false,
+  "minProperties": 1
+}

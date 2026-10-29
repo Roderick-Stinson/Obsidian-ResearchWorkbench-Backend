@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/paper-create.schema.json",
+  "title": "添加论文",
+  "type": "object",
+  "properties": {
+    "title": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "url": {
+      "$ref": "common.schema.json#/$defs/Url"
+    },
+    "own": {
+      "type": "boolean"
+    },
+    "watched": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "additionalProperties": false
+}

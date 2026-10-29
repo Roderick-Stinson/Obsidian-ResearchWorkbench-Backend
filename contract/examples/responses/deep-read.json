@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "deep-read",
+  "generatedAt": "2026-10-27T15:42:05+08:00",
+  "runId": "run-2026-10-27",
+  "paperId": "arxiv-2610.17613",
+  "markdown": "## 研究动机\n\n（示例）……\n\n## 方法\n\n（示例）……",
+  "sources": [
+    {
+      "id": "arxiv-2610.17613",
+      "title": "MAS-Gate",
+      "url": "https://arxiv.org/abs/2610.17613"
+    }
+  ]
+}

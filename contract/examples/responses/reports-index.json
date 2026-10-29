@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "reports-index",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "reports": [
+    {
+      "id": "weekly-2026-10-19",
+      "type": "weekly",
+      "period": {
+        "start": "2026-10-19",
+        "end": "2026-10-25"
+      },
+      "title": "周报 · 2026-10-19 当周",
+      "generatedAt": "2026-10-26T09:00:00+08:00"
+    }
+  ],
+  "topPapers": [
+    {
+      "paper": {
+        "id": null,
+        "title": "自进化智能体架构 HarnessOpt 与插件架构在固定模型权重下大幅提升任务表现"
+      },
+      "score": 0.8,
+      "reason": ""
+    }
+  ]
+}

@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "kind": "pipeline",
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "runId": "run-2026-10-27",
+  "schedule": [
+    {
+      "when": "01:00",
+      "what": "每日流程（16 步依次执行）",
+      "panel": "首页 → 流程明细"
+    },
+    {
+      "when": "08:30",
+      "what": "Telegram 推送当期",
+      "panel": ""
+    },
+    {
+      "when": "每 30 分钟",
+      "what": "自动补跑暂停/失败的步骤",
+      "panel": "首页 → 流程明细"
+    },
+    {
+      "when": "每周一",
+      "what": "更新候选关键词；出上周周报",
+      "panel": "我的研究领域、报告"
+    }
+  ],
+  "latestRun": {
+    "runId": "run-2026-10-27",
+    "date": "2026-10-27",
+    "status": "partial",
+    "startedAt": "2026-10-27T01:00:00+08:00",
+    "finishedAt": "2026-10-27T01:20:00+08:00",
+    "steps": [
+      {
+        "key": "fetch",
+        "name": "抓取新论文",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "version-check",
+        "name": "检查中稿，升级论文 ID",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "classify",
+        "name": "按研究兴趣判定相关性",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "skim",
+        "name": "读全文速读",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "recommend",
+        "name": "分出核心 / 邻近 / 热点三类推荐",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "pick",
+        "name": "挑选精选（≤10 篇）",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "deep-read",
+        "name": "写精读",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "results",
+        "name": "更新结果表",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "map",
+        "name": "领域地图重组",
+        "status": "failed",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 3,
+        "error": "RuntimeError: 领域地图重组失败：退出码 1"
+      },
+      {
+        "key": "must-read",
+        "name": "更新必读",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "classics",
+        "name": "更新经典",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "interests",
+        "name": "更新候选关键词",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "research-lines",
+        "name": "推进研究线",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "hotspots",
+        "name": "整理热点",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "report",
+        "name": "生成报告",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
+        "key": "push",
+        "name": "推送 Telegram",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      }
+    ]
+  },
+  "attention": [
+    {
+      "id": "pipeline-run-2026-10-27-map",
+      "source": "pipeline",
+      "severity": "error",
+      "title": "领域发展史重组失败",
+      "summary": "RuntimeError: 领域地图重组失败：退出码 1",
+      "since": "2026-10-27T01:20:00+08:00",
+      "link": null
+    }
+  ]
+}

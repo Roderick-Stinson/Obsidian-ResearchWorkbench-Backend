@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/interests-extraction.schema.json",
+  "title": "一次关键词整理结果",
+  "type": "object",
+  "properties": {
+    "overview": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "basis": {
+      "type": "object",
+      "properties": {
+        "ownPapers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "watchedPapers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "relevantPapers": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "ownPapers",
+        "watchedPapers",
+        "relevantPapers"
+      ]
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "summary": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "paper"
+                  ]
+                },
+                "ref": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                },
+                "title": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                },
+                "quote": {
+                  "anyOf": [
+                    {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "ref",
+                "title",
+                "quote"
+              ]
+            },
+            "minItems": 1
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                },
+                "summary": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "paper"
+                        ]
+                      },
+                      "ref": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "title": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "quote": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/Text"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "ref",
+                      "title",
+                      "quote"
+                    ]
+                  },
+                  "minItems": 1
+                },
+                "children": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "summary": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "evidence": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "paper"
+                              ]
+                            },
+                            "ref": {
+                              "$ref": "common.schema.json#/$defs/Text"
+                            },
+                            "title": {
+                              "$ref": "common.schema.json#/$defs/Text"
+                            },
+                            "quote": {
+                              "anyOf": [
+                                {
+                                  "$ref": "common.schema.json#/$defs/Text"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "ref",
+                            "title",
+                            "quote"
+                          ]
+                        },
+                        "minItems": 1
+                      },
+                      "children": {
+                        "type": "array",
+                        "maxItems": 0
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "summary",
+                      "evidence"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "label",
+                "summary",
+                "evidence"
+              ]
+            }
+          }
+        },
+        "required": [
+          "label",
+          "summary",
+          "evidence"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "overview",
+    "basis",
+    "domains"
+  ]
+}

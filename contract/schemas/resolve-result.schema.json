@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/resolve-result.schema.json",
+  "title": "论文 ID 解析结果",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "resolve-result"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "common.schema.json#/$defs/PaperId"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/PaperId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "ids"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "kind": "paper",
+  "id": "openreview-imcyVlzpXh",
+  "aliases": [
+    "arxiv-2502.04180"
+  ],
+  "title": "Multi-agent Architecture Search via Agentic Supernet",
+  "titleZh": "MaAS：基于智能体超网的多智能体架构搜索",
+  "authors": [
+    "Guibin Zhang"
+  ],
+  "firstAuthor": "Guibin Zhang",
+  "year": 2025,
+  "venue": "ICML 2025",
+  "publicationStatus": "已发表",
+  "versions": [
+    {
+      "id": "openreview-imcyVlzpXh",
+      "kind": "openreview",
+      "label": "ICML 2025",
+      "url": "https://openreview.net/forum?id=imcyVlzpXh",
+      "date": null
+    },
+    {
+      "id": "arxiv-2502.04180",
+      "kind": "arxiv",
+      "label": "arXiv:2502.04180v2",
+      "url": "https://arxiv.org/abs/2502.04180",
+      "date": "2025-02-06"
+    }
+  ],
+  "urls": {
+    "source": "https://openreview.net/pdf?id=imcyVlzpXh",
+    "pdf": "https://arxiv.org/pdf/2502.04180",
+    "code": "https://github.com/bingreeky/MaAS"
+  },
+  "hasPdf": true,
+  "pdfSha256": "1f7a580667049d3f7ac879c9ef9b3d206e22ae5f52ee18ab1b52fe0b312bc0b0",
+  "citations": {
+    "count": 120,
+    "updatedAt": "2026-10-27T01:10:00+08:00"
+  },
+  "metadataStatus": "部分核实",
+  "summary": "把多智能体架构搜索变成在智能体超网上按查询采样子架构。",
+  "matchedKeywords": [
+    {
+      "nodeId": "kw-arch-search",
+      "label": "多智能体架构搜索"
+    }
+  ],
+  "hasDeepRead": false,
+  "addedAt": "2026-10-27T09:45:56+00:00",
+  "updatedAt": "2026-10-27T09:45:56+00:00",
+  "user": {
+    "paperId": "openreview-imcyVlzpXh",
+    "rating": 0,
+    "flags": [],
+    "relevance": "相关",
+    "watched": true,
+    "own": false,
+    "discussionStatus": "待讨论",
+    "updatedAt": "2026-10-27T15:39:49+08:00"
+  }
+}

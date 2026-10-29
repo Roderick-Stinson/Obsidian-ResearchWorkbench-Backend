@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/paper.schema.json",
+  "title": "论文详情",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "paper"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/PaperId"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/PaperId"
+          },
+          "uniqueItems": true
+        },
+        "title": {
+          "$ref": "common.schema.json#/$defs/Text"
+        },
+        "titleZh": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/Text"
+          }
+        },
+        "firstAuthor": {
+          "type": "string"
+        },
+        "year": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "venue": {
+          "type": "string"
+        },
+        "publicationStatus": {
+          "enum": [
+            "已发表",
+            "已录用",
+            "投稿中",
+            "预印本",
+            "待核实"
+          ]
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/PaperId"
+              },
+              "kind": {
+                "enum": [
+                  "proceedings",
+                  "journal",
+                  "openreview",
+                  "arxiv"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "url": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/Url"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "date": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/Date"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "label",
+              "url",
+              "date"
+            ]
+          }
+        },
+        "urls": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/Url"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "pdf": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/Url"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "code": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/Url"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "source",
+            "pdf",
+            "code"
+          ]
+        },
+        "hasPdf": {
+          "type": "boolean"
+        },
+        "pdfSha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "citations": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "updatedAt": {
+              "anyOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/DateTime"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "count",
+            "updatedAt"
+          ]
+        },
+        "metadataStatus": {
+          "enum": [
+            "已核实",
+            "部分核实",
+            "待核实"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "matchedKeywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "nodeId": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "label": {
+                "$ref": "common.schema.json#/$defs/Text"
+              }
+            },
+            "required": [
+              "nodeId",
+              "label"
+            ]
+          }
+        },
+        "hasDeepRead": {
+          "type": "boolean"
+        },
+        "addedAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "updatedAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "user": {
+          "$ref": "common.schema.json#/$defs/PaperUser"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/Text"
+          }
+        },
+        "libraryRelevance": {
+          "anyOf": [
+            {
+              "enum": [
+                "core",
+                "related"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "libraryReason": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "userEdited": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/Text"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "aliases",
+        "title",
+        "titleZh",
+        "authors",
+        "firstAuthor",
+        "year",
+        "venue",
+        "publicationStatus",
+        "versions",
+        "urls",
+        "hasPdf",
+        "pdfSha256",
+        "citations",
+        "metadataStatus",
+        "summary",
+        "matchedKeywords",
+        "hasDeepRead",
+        "addedAt",
+        "updatedAt",
+        "user"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "_说明": "复制成 data/survey.json 再改成你的方向。queries 用 Semantic Scholar bulk 检索语法（+ 与，| 或，\"\" 短语，* 前缀），topic 只是标记检索出处；direction 是给大模型看的方向说明（写清楚什么算相关、什么不算）；extraTopics 是关键词树以外、筛选时也可以归入的方向。",
+  "queries": [
+    {
+      "topic": "rag",
+      "query": "(\"retrieval-augmented generation\" | \"retrieval augmented\" | RAG) + (\"language model*\" | LLM*)"
+    },
+    {
+      "topic": "rag",
+      "query": "(\"dense retrieval\" | reranker* | \"query rewriting\") + (\"language model*\" | LLM*)"
+    },
+    {
+      "topic": "eval",
+      "query": "(hallucination* | faithfulness | attribution) + (\"retrieval-augmented\" | RAG)"
+    }
+  ],
+  "direction": [
+    "我的研究方向：检索增强生成（RAG）——检索器与重排、查询改写、检索结果如何被大模型使用，以及 RAG 的幻觉与可归因性评测。",
+    "不算相关的：只是把 RAG 当现成工具用在某个应用里、方法上没有新设计的工作。"
+  ],
+  "extraTopics": [
+    "RAG 评测"
+  ]
+}
