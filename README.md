@@ -22,7 +22,7 @@ pwb/            代码
   dblp.py       用 DBLP 整库核实“待核实”论文是否中稿
   pdfs.py       批量下载论文库的 PDF（只用公开来源）
   landscape.py  经典与必读、领域发展史（参考文献统计 + 大模型整理）
-  feed.py       arXiv 智能体方向论文流（按月，不限于论文库）
+  feed.py       arXiv 论文流（按月，不限于论文库；检索词在 data/survey.json 里配置）
   hotspots.py   全领域热点演变（词组占比统计 + 大模型归类）
   jobs.py       后台长任务（PDF 下载、DBLP 核实）的进度
   importer.py   从 vault 一次性导入论文条目和 PDF
@@ -44,6 +44,49 @@ cd ~/PaperWorkbench
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
+
+## 从零开始
+
+新用户装好以后，按下面的顺序配置。只有第 2 步要手写配置文件，其余在面板上点或者运行一条命令。
+
+1. **装后端**：见上面的“安装”。
+2. **写检索方向**（唯一必须手写的配置文件）：
+   ```bash
+   mkdir -p data && cp survey.example.json data/survey.json
+   ```
+   然后按你的方向改 `data/survey.json`：
+
+   | 字段 | 用在哪里 | 写什么 |
+   |---|---|---|
+   | `queries` | 领域检索入库 | Semantic Scholar 检索词（`+` 与，`\|` 或，`""` 短语，`*` 前缀） |
+   | `direction` | 筛选论文、整理经典与发展史 | 给大模型看的方向说明，写清楚什么算相关、什么不算 |
+   | `extraTopics` | 筛选论文 | 关键词树以外、筛选时也可以归入的方向（可以为空） |
+   | `arxiv.query` | 热点演变 | arXiv 检索词，如 `abs:agent`（`abs:` 摘要、`ti:` 标题，可以用 `AND` / `OR`） |
+   | `arxiv.field` | 热点演变 | 领域的中文名，如“智能体”，显示在面板和给大模型的说明里 |
+   | `arxiv.categories` | 热点演变 | 保留的 arXiv 分类前缀，默认 `["cs."]`（计算机类） |
+
+3. **准备大模型**：默认用本机 Claude Code，装好后运行一次 `claude` 登录即可，不需要配置文件。用 DeepSeek 的话，写 `data/secrets.json`：`{"deepseekApiKey": "sk-..."}`，再在面板“设置 → 大模型引擎”里切换。
+4. **启动后端**：`.venv/bin/python -m pwb serve`。
+5. **装面板**：见[面板仓库](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)的 README。后端不在默认地址时，在面板“设置 → 后端连接”里改。
+6. **写下研究领域**：面板“我的研究领域” → “添加一级领域”，写你的大方向（说明里写清楚包括什么、不包括什么）。
+7. **加几篇代表论文**：
+   - 面板“关注论文” → “添加关注论文”，贴 arXiv 链接即可，后端会在后台补上标题、作者、摘要并下载 PDF；
+   - 自己的论文在“我的研究领域” → “添加本人论文”，没公开的稿子填标题、上传 PDF。
+8. **整理关键词**：“我的研究领域” → “重新整理关键词”。大模型读这些论文的 PDF，整理出二、三级关键词；没有 PDF 的论文只能用标题和摘要，结果里会提示。
+9. **建论文库**（在干净的终端里运行，不要在 Claude Code 会话里）：
+   ```bash
+   .venv/bin/python -m pwb survey        # 按 survey.json 检索、大模型筛选、入库
+   .venv/bin/python -m pwb fetch-pdfs    # 下载论文库的公开 PDF
+   ```
+10. **热点、经典与发展史**：
+    ```bash
+    .venv/bin/python -m pwb feed          # 取 arXiv 论文流
+    .venv/bin/python -m pwb landscape     # 经典与必读、领域发展史（含热点演变）
+    ```
+
+之后在论文库里给论文标“相关” / “重点关注”，再“重新整理关键词”，关键词树会跟着你的标记变化。
+
+可选的配置：环境变量见下面的“配置”；`S2_API_KEY`（Semantic Scholar 的免费 key）能让检索快很多。
 
 ## 常用命令
 
@@ -117,7 +160,7 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 
 面板上也可以点“重新整理”（任务 `rebuild-classics` / `rebuild-map`）。必读按发表年份分三段，每段的核心论文逐篇判断、符合标准的都选，不限篇数（只按被引排，新作永远进不来）。
 
-全领域热点演变要先取 arXiv 论文流（标题或摘要含 agent 的计算机类论文，按月；第一次约 40 个请求、几分钟，之后只重取最近两个月）：
+全领域热点演变要先取 arXiv 论文流：按 `data/survey.json` 里 `arxiv.query` 的检索词，按月取标题和摘要（默认只保留计算机类）。第一次约 40 个请求、几分钟，之后只重取最近两个月；改了检索词会全部重取：
 
 ```bash
 .venv/bin/python -m pwb feed                      # 默认从 2023-07 起

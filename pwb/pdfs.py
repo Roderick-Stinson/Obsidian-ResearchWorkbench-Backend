@@ -86,6 +86,52 @@ def arxiv_by_title(title):
     return None
 
 
+def fetch_one(store, pid):
+    """下载一篇论文的 PDF，返回结果记录（status: ok / none / blocked / error）。"""
+    paper = store.get_paper(pid)
+    tried = []
+
+    def attempt(sources):
+        for label, url in sources:
+            try:
+                body, final = _get(url)
+            except Exception as e:
+                tried.append("{}：{}".format(label, getattr(e, "code", None) or type(e).__name__))
+                continue
+            if not body.startswith(b"%PDF"):
+                tried.append("{}：不是 PDF（多半是登录页或付费墙）".format(label))
+                continue
+            if len(body) > MAX_BYTES:
+                tried.append("{}：超过 100 MB".format(label))
+                continue
+            target = store.settings.pdf_dir / (re.sub(r"[^A-Za-z0-9._-]", "_", pid) + ".pdf")
+            tmp = target.with_suffix(".tmp")
+            tmp.write_bytes(body)
+            os.replace(tmp, target)
+            store.set_pdf(pid, target.name, hashlib.sha256(body).hexdigest())
+            return {"status": "ok", "source": label, "url": final, "bytes": len(body)}
+        return None
+
+    sources = candidates(paper)
+    result = attempt(sources)
+    # 登记的来源都不行、其中又没有 arXiv 时，按标题到 arXiv 找同名论文（会议论文多半也挂在 arXiv 上）。
+    if result is None and not any(label.startswith("arXiv") for label, _ in sources) and paper["title"] != pid:
+        try:
+            found = arxiv_by_title(paper["title"])
+        except Exception as e:
+            found = None
+            tried.append("arXiv 标题搜索失败：{}".format(type(e).__name__))
+        if found:
+            if not store.resolve("arxiv-" + found):
+                store.upsert_paper(paper, paper["aliases"] + ["arxiv-" + found])
+            sources = sources + [("arXiv（按标题找到）", _arxiv_pdf(found))]
+            result = attempt(sources[-1:])
+    if result is None:
+        status = "none" if not sources else "blocked" if all("不是 PDF" in t or "403" in t or "401" in t for t in tried) else "error"
+        result = {"status": status, "tried": tried or ["没有公开来源"]}
+    return result
+
+
 def fetch_all(store, log=print, limit=None, retry=False):
     state = store.get_kv("pdf-fetch") or {}
     with store.conn() as c:
@@ -99,46 +145,7 @@ def fetch_all(store, log=print, limit=None, retry=False):
         paper = store.get_paper(pid)
         if not paper or paper["hasPdf"]:
             continue
-        tried = []
-
-        def attempt(sources):
-            for label, url in sources:
-                try:
-                    body, final = _get(url)
-                except Exception as e:
-                    tried.append("{}：{}".format(label, getattr(e, "code", None) or type(e).__name__))
-                    continue
-                if not body.startswith(b"%PDF"):
-                    tried.append("{}：不是 PDF（多半是登录页或付费墙）".format(label))
-                    continue
-                if len(body) > MAX_BYTES:
-                    tried.append("{}：超过 100 MB".format(label))
-                    continue
-                target = store.settings.pdf_dir / (re.sub(r"[^A-Za-z0-9._-]", "_", pid) + ".pdf")
-                tmp = target.with_suffix(".tmp")
-                tmp.write_bytes(body)
-                os.replace(tmp, target)
-                store.set_pdf(pid, target.name, hashlib.sha256(body).hexdigest())
-                return {"status": "ok", "source": label, "url": final, "bytes": len(body)}
-            return None
-
-        sources = candidates(paper)
-        result = attempt(sources)
-        # 登记的来源都不行、其中又没有 arXiv 时，按标题到 arXiv 找同名论文（会议论文多半也挂在 arXiv 上）。
-        if result is None and not any(label.startswith("arXiv") for label, _ in sources):
-            try:
-                found = arxiv_by_title(paper["title"])
-            except Exception as e:
-                found = None
-                tried.append("arXiv 标题搜索失败：{}".format(type(e).__name__))
-            if found:
-                if not store.resolve("arxiv-" + found):
-                    store.upsert_paper(paper, paper["aliases"] + ["arxiv-" + found])
-                sources = sources + [("arXiv（按标题找到）", _arxiv_pdf(found))]
-                result = attempt(sources[-1:])
-        if result is None:
-            status = "none" if not sources else "blocked" if all("不是 PDF" in t or "403" in t or "401" in t for t in tried) else "error"
-            result = {"status": status, "tried": tried or ["没有公开来源"]}
+        result = fetch_one(store, pid)
         counts[result["status"]] += 1
         state[pid] = {**result, "at": now()}
         if n % 10 == 0 or n == len(todo):
@@ -146,6 +153,46 @@ def fetch_all(store, log=print, limit=None, retry=False):
             log("进度 {}/{}：已下载 {ok}，没有公开来源 {none}，被挡住（付费墙等）{blocked}，出错 {error}".format(n, len(todo), **counts))
     store.set_kv("pdf-fetch", state)
     return counts
+
+
+def arxiv_meta(arxiv_id):
+    """arXiv 上这篇论文的标题、作者、年份、摘要、首发日期；找不到返回 None。"""
+    url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode({"id_list": arxiv_id, "max_results": 1})
+    body, _ = _get(url)
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    entry = ET.fromstring(body).find("a:entry", ns)
+    title = " ".join((entry.findtext("a:title", "", ns) if entry is not None else "").split())
+    if not title or title == "Error":
+        return None
+    authors = [" ".join(a.findtext("a:name", "", ns).split()) for a in entry.findall("a:author", ns)]
+    published = entry.findtext("a:published", "", ns)[:10]
+    return {"title": title, "authors": authors, "firstAuthor": authors[0] if authors else "",
+            "year": int(published[:4]) if published else None, "published": published or None,
+            "abstract": " ".join(entry.findtext("a:summary", "", ns).split())}
+
+
+def complete_paper(store, pid, log=print):
+    """用链接新加的论文：从 arXiv 补上标题、作者、年份、摘要（你填过或改过的不动），再下载 PDF。"""
+    paper = store.get_paper(pid)
+    arxiv = next((i[6:] for i in [paper["id"], *paper["aliases"]] if i.startswith("arxiv-")), None)
+    if arxiv:
+        meta = arxiv_meta(arxiv)
+        if meta:
+            edited = set(paper.get("userEdited") or [])
+            fill = {k: meta[k] for k in ("authors", "firstAuthor", "year", "abstract") if k not in edited and not paper.get(k)}
+            if paper["title"] == pid:
+                fill["title"] = meta["title"]
+            versions = [{**v, "date": v.get("date") or meta["published"]} if v["id"] == "arxiv-" + arxiv else v for v in paper["versions"]]
+            store.upsert_paper({**paper, **fill, "versions": versions}, paper["aliases"])
+            log("{}：已从 arXiv 补上 {}".format(pid, "、".join(fill) or "发布日期"))
+    paper = store.get_paper(pid)
+    if not paper["hasPdf"]:
+        result = fetch_one(store, pid)
+        state = store.get_kv("pdf-fetch") or {}
+        state[pid] = {**result, "at": now()}
+        store.set_kv("pdf-fetch", state)
+        log("{}：PDF {}".format(pid, "已下载" if result["status"] == "ok" else "没下到（" + "；".join(result.get("tried", [])) + "）"))
+    return store.get_paper(pid)
 
 
 def missing_report(store):

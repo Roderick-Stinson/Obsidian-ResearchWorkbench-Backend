@@ -1,8 +1,10 @@
 """HTTP 接口（约定第 4 节）。路径都在 /api/v1 下。"""
 import hashlib
+import logging
 import os
 import re
 import secrets
+import threading
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -10,7 +12,7 @@ from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import __version__, contract, errors, interests, jobs, llm, pdfmeta
+from . import __version__, contract, errors, interests, jobs, llm, pdfmeta, pdfs
 from .errors import invalid, not_found
 from .store import Store
 from .tasks import HANDLERS, Worker
@@ -18,6 +20,7 @@ from .util import arxiv_id_from_url, new_id, now
 
 PREFIX = "/api/v1"
 LINE_ID_RE = re.compile(r"^line-[a-z0-9-]+$")
+log = logging.getLogger("pwb.api")
 OPENREVIEW_RE = re.compile(r"openreview\.net/(?:forum|pdf)\?id=([A-Za-z0-9_-]+)")
 MAX_PDF_BYTES = 100 * 2**20
 CORS_ORIGINS = r"^(app://obsidian\.md|capacitor://localhost|http://(localhost|127\.0\.0\.1)(:\d+)?)$"
@@ -151,32 +154,50 @@ def create_app(settings):
     def paper_topics():
         return out("paper-topics", {"items": store.topic_counts()})
 
+    def complete_later(pid):
+        """后台从 arXiv 补信息、下载 PDF（要访问网络，不在请求里等）。测试里不起后台线程。"""
+        def run():
+            try:
+                pdfs.complete_paper(store, pid, log=log.info)
+            except Exception:
+                log.exception("补全论文信息失败：%s", pid)
+        if settings.start_worker:
+            threading.Thread(target=run, name="pwb-complete-" + pid, daemon=True).start()
+
     @r.post("/papers")
     async def create_paper(request: Request):
-        """手动添加论文（例如本人论文）。已在论文库里的不重复建，只更新标记。"""
+        """手动添加论文（本人论文、关注论文）。已在论文库里的不重复建，只更新标记。
+        给了 arXiv / OpenReview 链接的，后台会补上标题、作者等信息并下载 PDF；标题可以不填。"""
         body = await read_body(request, "paper-create")
         url = body.get("url")
+        title = (body.get("title") or "").strip()
+        if not title and not url:
+            raise invalid("标题和链接至少填一个")
         m = OPENREVIEW_RE.search(url or "")
         pid = ("openreview-" + m.group(1) if m else arxiv_id_from_url(url)) or "local-" + secrets.token_hex(4)
         flags = {k: body[k] for k in ("own", "watched") if body.get(k)}
         existing = store.resolve(pid)
         if existing:
             paper = store.get_paper(existing)
-            if paper["title"] == existing:
+            if paper["title"] == existing and title:
                 # 收录时没拿到标题（例如匿名投稿下载失败）的，用你填的标题补上。
-                store.upsert_paper({**paper, "title": body["title"].strip()}, paper["aliases"])
+                store.upsert_paper({**paper, "title": title}, paper["aliases"])
             if flags:
                 store.patch_user(existing, flags)
+            if not paper["hasPdf"]:
+                complete_later(existing)
             return out("paper", store.get_paper(existing))
         kind = pid.split("-", 1)[0]
         store.upsert_paper({
-            "id": pid, "title": body["title"].strip(), "titleZh": None, "authors": [], "firstAuthor": "", "year": None,
+            "id": pid, "title": title or pid, "titleZh": None, "authors": [], "firstAuthor": "", "year": None,
             "venue": "", "publicationStatus": "投稿中" if body.get("own") else "待核实",
             "versions": [{"id": pid, "kind": kind, "label": pid, "url": url, "date": None}] if kind in ("openreview", "arxiv") else [],
             "urls": {"source": url, "pdf": None, "code": None}, "pdfSha256": None,
             "citations": {"count": None, "updatedAt": None}, "metadataStatus": "待核实", "summary": "", "matchedKeywords": []})
         if flags:
             store.patch_user(pid, flags)
+        if kind in ("openreview", "arxiv"):
+            complete_later(pid)
         return out("paper", store.get_paper(pid), status=201)
 
     @r.patch("/papers/{paper_id}")

@@ -2,6 +2,8 @@
 import json
 from datetime import datetime, timedelta
 
+import pytest
+
 from pwb import landscape, llm
 from pwb.tasks import run_task
 from pwb.util import TZ
@@ -100,7 +102,8 @@ def test_map_needs_classics_and_refs(client, store, monkeypatch):
 
 def test_hotspots_order_by_onset(store, monkeypatch):
     """三个说法先后冒出来：harness → skills → memory；热点按起势时间排序。"""
-    from pwb import feed, hotspots
+    from pwb import feed, hotspots, survey
+    survey.profile_path(store).write_text(json.dumps({"arxiv": {"query": "abs:agent", "field": "智能体"}}), encoding="utf-8")
     feed.init(store)
     months = feed.months("2025-01", "2025-12")
     filler = "We study planning with tool calls and evaluate reasoning benchmarks for web navigation."
@@ -134,3 +137,27 @@ def test_hotspots_order_by_onset(store, monkeypatch):
     assert [h["onset"] for h in hot["items"]] == ["2025-04", "2025-07", "2025-10"]
     assert hot["items"][1]["terms"] == ["agent skills"], "编造的词组丢掉"
     assert hot["items"][2]["counts"][-1] == 30 and hot["items"][2]["recentSharePct"] == 30.0
+    assert "智能体方向（检索词 abs:agent）" in seen["prompt"] and "\nagent |" not in seen["prompt"], "检索词本身不算热点"
+    assert "abs:agent" in hot["source"] and "_field" not in hotspots.public(hot)
+
+
+def test_feed_requires_profile_and_refetches_on_new_query(store, monkeypatch):
+    from pwb import feed, survey
+    with pytest.raises(FileNotFoundError, match="arxiv.query"):
+        feed.fetch(store, since="2026-01")
+    queries = []
+    monkeypatch.setattr(feed, "fetch_month", lambda store, month, prof, log=print: queries.append((month, prof["query"])) or (0, 0))
+    monkeypatch.setattr(feed, "months", lambda since, until=None: ["2026-01", "2026-02", "2026-03"])
+    path = survey.profile_path(store)
+    path.write_text(json.dumps({"arxiv": {"query": "abs:agent"}}), encoding="utf-8")
+    feed.fetch(store, since="2026-01")
+    feed.fetch(store, since="2026-01")
+    assert [m for m, _ in queries] == ["2026-01", "2026-02", "2026-03", "2026-02", "2026-03"], "取过的老月份不重取"
+    with store.conn() as c:
+        c.execute("INSERT INTO arxiv_feed VALUES ('2601.00001', '2026-01', '2026-01-02', 't', 'a', '[]')")
+    path.write_text(json.dumps({"arxiv": {"query": "abs:rag", "field": "RAG"}}), encoding="utf-8")
+    queries.clear()
+    feed.fetch(store, since="2026-01")
+    assert queries == [("2026-01", "abs:rag"), ("2026-02", "abs:rag"), ("2026-03", "abs:rag")], "换了检索词全部重取"
+    with store.conn() as c:
+        assert c.execute("SELECT COUNT(*) FROM arxiv_feed").fetchone()[0] == 0, "旧检索词的论文流作废"

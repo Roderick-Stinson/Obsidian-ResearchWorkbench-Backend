@@ -130,6 +130,7 @@ def test_rebuild_task_end_to_end(client, watched, monkeypatch):
     done = assert_contract(client.get(API + "/tasks/" + task["id"]).json(), "task")
     assert done["status"] == "done", done
     assert "整理所得关键词 3 个" in done["message"]
+    assert "没有 PDF" not in done["message"]
     tree = assert_contract(client.get(API + "/me/interests").json(), "interests")
     assert [d["label"] for d in tree["domains"]] == ["我的方向", "多智能体系统"]
     assert tree["basis"] == {"ownPapers": 0, "watchedPapers": 1, "relevantPapers": 0}
@@ -209,3 +210,13 @@ def test_rebuild_reports_sources_still_unused(client, watched, monkeypatch):
     monkeypatch.setattr(llm, "complete_json", lambda *a: json.loads(json.dumps(GOOD)))
     message, _ = rebuild.rebuild_interests(watched, llm.get_config(watched), lambda *a: None)
     assert "这些材料没被用上：EvoSteer" in message
+
+
+def test_sources_without_pdf_use_abstract(watched):
+    watched.upsert_paper({"id": "arxiv-2005.11401", "title": "RAG", "authors": [], "publicationStatus": "待核实", "summary": "",
+                          "abstract": "We explore retrieval."})
+    watched.patch_user("arxiv-2005.11401", {"watched": True})
+    sources, _ = rebuild.gather_sources(watched)
+    no_pdf = next(s for s in sources if s["ref"] == "arxiv-2005.11401")
+    assert not no_pdf["hasPdf"] and "We explore retrieval." in no_pdf["text"]
+    assert all(s["hasPdf"] for s in sources if s["ref"] != "arxiv-2005.11401")

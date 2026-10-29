@@ -71,10 +71,12 @@ def gather_sources(store):
         data = json.loads(row["data"])
         pdf = store.settings.pdf_dir / row["pdf_file"] if row["pdf_file"] else None
         text = _pdf_head(pdf) if pdf and pdf.exists() else ""
+        has_pdf = bool(text)
         if not text:
             # 没有原文时只给标题和摘要；这种材料不能引用原文摘录。
-            text = "（后端没有这篇的 PDF，只有元数据）标题：{}；一句话理解：{}".format(data["title"], data.get("summary") or "无")
-        sources.append({"kind": "paper", "ref": row["id"], "title": data["title"], "role": ROLE[role], "text": text})
+            text = "（后端没有这篇的 PDF，只有元数据）标题：{}；一句话理解：{}；摘要：{}".format(
+                data["title"], data.get("summary") or "无", data.get("abstract") or "无")
+        sources.append({"kind": "paper", "ref": row["id"], "title": data["title"], "role": ROLE[role], "text": text, "hasPdf": has_pdf})
     return sources[:MAX_SOURCES], counts
 
 
@@ -214,4 +216,8 @@ def rebuild_interests(store, config, progress):
         notes.append("{} 个关键词的证据指向不存在的材料，已去掉".format(dropped_nodes))
     if missing:
         notes.append("这些材料没被用上：" + "、".join(s["title"] for s in missing))
+    no_pdf = [s for s in sources if not s["hasPdf"]]
+    if no_pdf:
+        notes.append("{} 篇没有 PDF，只用了标题和摘要（在面板上传 PDF，或运行 pwb fetch-pdfs 后重新整理）：{}".format(
+            len(no_pdf), "、".join(s["title"] for s in no_pdf[:5]) + ("等" if len(no_pdf) > 5 else "")))
     return "；".join(notes), [{"kind": "data", "path": "/me/interests"}]

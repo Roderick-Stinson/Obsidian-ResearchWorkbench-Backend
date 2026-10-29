@@ -56,3 +56,38 @@ def test_fetch_all(client, store, monkeypatch):
     calls.clear()
     assert pdfs.fetch_all(store, log=lambda m: None) == {"ok": 0, "none": 0, "blocked": 0, "error": 0}, "没来源的、被挡的默认不重试"
     assert calls == []
+
+
+META = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
+<entry><id>http://arxiv.org/abs/2005.11401v4</id><published>2020-05-22T17:34:00Z</published>
+<title>Retrieval-Augmented Generation for
+ Knowledge-Intensive NLP Tasks</title><summary> We explore RAG. </summary>
+<author><name>Patrick Lewis</name></author><author><name>Ethan Perez</name></author></entry></feed>"""
+
+
+def test_add_by_link_completes_paper(client, store, monkeypatch):
+    started = []
+    monkeypatch.setattr(store.settings, "start_worker", True)
+    monkeypatch.setattr(pdfs, "complete_paper", lambda store, pid, log=print: started.append(pid))
+    assert client.post(API + "/papers", json={}).status_code == 400, "标题和链接至少填一个"
+    res = client.post(API + "/papers", json={"url": "https://arxiv.org/abs/2005.11401", "watched": True})
+    body = assert_contract(res.json(), "paper")
+    assert res.status_code == 201 and body["title"] == "arxiv-2005.11401" and body["user"]["watched"]
+    client.post(API + "/papers", json={"title": "没有链接的稿子", "own": True})
+    import time
+    for _ in range(50):
+        if started:
+            break
+        time.sleep(0.02)
+    assert started == ["arxiv-2005.11401"], "只有给了链接的才去补全"
+
+    served = {"https://export.arxiv.org/pdf/2005.11401": b"%PDF-1.5 rag"}
+    monkeypatch.undo()  # 换回真的 complete_paper，网络请求仍是假的
+    monkeypatch.setattr(pdfs, "_get", lambda url, tries=4: (META, url) if "api/query" in url else (served[url], url))
+    client.patch(API + "/papers/arxiv-2005.11401", json={"year": 2021})
+    paper = pdfs.complete_paper(store, "arxiv-2005.11401", log=lambda m: None)
+    assert paper["title"] == "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"
+    assert (paper["firstAuthor"], paper["authors"], paper["abstract"]) == ("Patrick Lewis", ["Patrick Lewis", "Ethan Perez"], "We explore RAG.")
+    assert paper["year"] == 2021, "你改过的字段不动"
+    assert paper["versions"][0]["date"] == "2020-05-22" and paper["hasPdf"]
+    assert store.get_kv("pdf-fetch")["arxiv-2005.11401"]["status"] == "ok"

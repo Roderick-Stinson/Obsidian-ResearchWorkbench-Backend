@@ -272,7 +272,7 @@ def closed(props, optional=None, **kw):
 
 # 请求体：没有 kind，按文件名选 schema。
 bodies = {
-    "paper-create": ("添加论文", closed({"title": TEXT, "url": URL, "own": BOOL, "watched": BOOL}, optional=("url", "own", "watched"))),
+    "paper-create": ("添加论文", closed({"title": TEXT, "url": URL, "own": BOOL, "watched": BOOL}, optional=("title", "url", "own", "watched"))),
     "paper-patch": ("修正论文信息", closed({"title": TEXT, "titleZh": nullable(STR), "venue": STR, "firstAuthor": STR,
                                           "publicationStatus": enum("已发表", "已录用", "投稿中", "预印本", "待核实"),
                                           "year": nullable({"type": "integer", "minimum": 1900, "maximum": 2100})}, minProperties=1)),

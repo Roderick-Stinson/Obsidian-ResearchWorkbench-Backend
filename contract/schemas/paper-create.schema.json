@@ -17,8 +17,6 @@
       "type": "boolean"
     }
   },
-  "required": [
-    "title"
-  ],
+  "required": [],
   "additionalProperties": false
 }

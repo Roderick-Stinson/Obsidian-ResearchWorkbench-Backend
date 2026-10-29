@@ -1,10 +1,11 @@
-"""arXiv 上整个智能体方向的论文流（不限于论文库，也不限于已中稿）：按月取标题和摘要。
+"""arXiv 上你所在领域的论文流（不限于论文库，也不限于已中稿）：按月取标题和摘要。
 
 用途：热点演变（哪些说法什么时候冒出来、什么时候成为主流）要看全领域的最新论文。论文库只收已中稿、
 和关键词树相关的论文，会滞后半年到一年，也看不到关键词树以外的新方向。以后每日流水线也从这里取新论文。
 
-检索词 abs:agent（arXiv 会做词干匹配，agents / agentic 也算），只保留计算机类（cs.*）。
-每月的结果存在 arxiv_feed 表；取过的月份记在 user_kv 的 feed-months 里，当月和上个月每次都重新取（还在增加）。
+检索词和领域名在 data/survey.json 的 arxiv 里配置（例如 abs:agent，arXiv 会做词干匹配，agents / agentic 也算），
+默认只保留计算机类（cs.*）。每月的结果存在 arxiv_feed 表；取过的月份记在 user_kv 的 feed-months 里，
+当月和上个月每次都重新取（还在增加）。改了检索词或分类，之前取的论文流作废、全部重取。
 """
 import calendar
 import json
@@ -14,10 +15,10 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 
 from .pdfs import _get
+from .survey import load_profile
 from .util import TZ, now
 
 API = "https://export.arxiv.org/api/query?"
-QUERY = "abs:agent"
 PAGE = 1000
 NS = {"a": "http://www.w3.org/2005/Atom", "o": "http://a9.com/-/spec/opensearch/1.1/", "x": "http://arxiv.org/schemas/atom"}
 SCHEMA = """
@@ -26,6 +27,14 @@ CREATE TABLE IF NOT EXISTS arxiv_feed (
   title TEXT NOT NULL, abstract TEXT NOT NULL, cats TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS arxiv_feed_month ON arxiv_feed(month);
 """
+
+
+def profile(store):
+    """{query, field, categories}：arXiv 检索词、领域名（给大模型和面板看的中文名）、保留的分类前缀。"""
+    p = load_profile(store).get("arxiv") or {}
+    if not p.get("query"):
+        raise FileNotFoundError("还没配置 arXiv 论文流：在 data/survey.json 里写上 arxiv.query 和 arxiv.field（格式见 survey.example.json）")
+    return {"query": p["query"], "field": p.get("field") or p["query"], "categories": p.get("categories") or ["cs."]}
 
 
 def init(store):
@@ -59,10 +68,10 @@ def _parse(body):
     return total, rows
 
 
-def fetch_month(store, month, log=print):
+def fetch_month(store, month, prof, log=print):
     y, m = map(int, month.split("-"))
     last = calendar.monthrange(y, m)[1]
-    q = "{} AND submittedDate:[{:04d}{:02d}010000 TO {:04d}{:02d}{:02d}2359]".format(QUERY, y, m, y, m, last)
+    q = "({}) AND submittedDate:[{:04d}{:02d}010000 TO {:04d}{:02d}{:02d}2359]".format(prof["query"], y, m, y, m, last)
     start, total, kept = 0, None, 0
     while total is None or start < total:
         url = API + urllib.parse.urlencode({"search_query": q, "start": start, "max_results": PAGE,
@@ -74,24 +83,38 @@ def fetch_month(store, month, log=print):
             break
         with store.conn() as c:
             for r in rows:
-                if any(x.startswith("cs.") for x in r["cats"]):
+                if any(x.startswith(tuple(prof["categories"])) for x in r["cats"]):
                     c.execute("INSERT OR REPLACE INTO arxiv_feed VALUES (?, ?, ?, ?, ?, ?)",
                               (r["id"], month, r["published"], r["title"], r["abstract"], json.dumps(r["cats"])))
                     kept += 1
         start += len(rows)
-    log("{}：arXiv 共 {} 篇，计算机类 {} 篇".format(month, total, kept))
+    log("{}：arXiv 共 {} 篇，保留 {} 篇（分类 {}）".format(month, total, kept, "、".join(prof["categories"])))
     return total, kept
 
 
 def fetch(store, since="2023-07", log=print, refresh=False):
     init(store)
+    prof = profile(store)
+    key = {"query": prof["query"], "categories": prof["categories"]}
     done = store.get_kv("feed-months") or {}
+    old = store.get_kv("feed-query")
+    if old is None and done:
+        # 之前的版本没记检索词：认为已取的就是按现在的检索词取的，不重取。
+        store.set_kv("feed-query", key)
+    elif old != key:
+        if done:
+            log("arXiv 检索词或分类改了，之前取的论文流作废，全部重取")
+        with store.conn() as c:
+            c.execute("DELETE FROM arxiv_feed")
+        done = {}
+        store.set_kv("feed-months", done)
+        store.set_kv("feed-query", key)
     todo = months(since)
     fresh = set(todo[-2:])  # 当月和上个月还在增加，每次都重新取
     for month in todo:
         if month in done and month not in fresh and not refresh:
             continue
-        total, kept = fetch_month(store, month, log)
+        total, kept = fetch_month(store, month, prof, log)
         done[month] = {"total": total, "kept": kept, "at": now()}
         store.set_kv("feed-months", done)
     return done

@@ -432,8 +432,8 @@ def build_map(store, config, log):
             refs[key] = {**{k: v for k, v in p.items() if k != "_month"}, "_date": p["_month"], "_venue": "arXiv"}
             keys.append(key)
             lines.append("{} | {} | arXiv | 热点：{}".format(key, p["title"], h["name"]))
-        hot_lines.append("- {}：{}起势，{}达到峰值，最近占智能体论文的 {}%（词组：{}；代表论文 {}）".format(
-            h["name"], h["onset"], h["peak"], h["recentSharePct"], "、".join(h["terms"][:6]), "、".join(keys) or "无"))
+        hot_lines.append("- {}：{}起势，{}达到峰值，最近占{}论文的 {}%（词组：{}；代表论文 {}）".format(
+            h["name"], h["onset"], h["peak"], hot["_field"], h["recentSharePct"], "、".join(h["terms"][:6]), "、".join(keys) or "无"))
     stats = ["- {}：{} 篇".format(t, counts[t]) for t in topic_list if counts.get(t)] + \
             ["- 趋势：{} 近一年 {} 篇，变化 {:+d}%".format(t["direction"], t["paperCount"], t["changePct"]) for t in trend]
     ms = {"type": "object", "additionalProperties": False, "required": ["ref", "text"], "properties": {"ref": {"type": "string"}, "text": {"type": "string"}}}
@@ -448,7 +448,7 @@ def build_map(store, config, log):
                                                                           "metric": {"type": "string"}, "note": {"type": "string"},
                                                                           "refs": {"type": "array", "items": {"type": "string"}}}}}}}
     prompt = "\n".join([_direction_text(store), "",
-                        "请根据下面的经典工作、论文库代表论文、统计数据和整个智能体领域的热点演变，梳理这个领域的发展史：",
+                        "请根据下面的经典工作、论文库代表论文、统计数据和整个{}领域的热点演变，梳理这个领域的发展史：".format(hot["_field"] if hot else "研究"),
                         "- intro：3–5 句中文，概括领域从哪里起步、现在的重心、正在走向哪里。",
                         "- stages：按时间分 4–6 个阶段，每个阶段写 period（如“2022–2023”；最近两年请细到半年或季度，如“2025 下半年”）、title、description（2–3 句），"
                         "milestones 是这个阶段的标志性工作，ref 必须是下面列表里的编号（C…、P… 或 H…），text 一句中文说明它带来了什么。",
