@@ -31,7 +31,7 @@ write(R + "jobs.json", {**resp("jobs"), "items": [
     {"key": "dblp-verify", "name": "用 DBLP 核实“待核实”论文", "status": "running", "progress": {"done": 82, "total": 1107},
      "message": "正在下载 DBLP 整库：82 MB / 约 1107 MB（对方服务器限速）", "updatedAt": GEN}]})
 
-old = json.loads((ROOT / "面板组件" / "dashboard-data.json").read_text(encoding="utf-8"))
+old = json.loads((Path(__file__).resolve().parent / "example_source.json").read_text(encoding="utf-8"))
 b = old["brief"]
 start, end = b["weeklyPeriod"].split(" 至 ")
 write(R + "brief.json", {**resp("brief", at="2026-10-27T15:50:48+08:00"),
@@ -41,12 +41,13 @@ write(R + "brief.json", {**resp("brief", at="2026-10-27T15:50:48+08:00"),
     "picks": [],
     "todayNew": [{"id": p["id"], "title": p["title"], "summary": p["summary"], "publishedAt": p["published"],
                   "url": "https://arxiv.org/abs/" + p["id"][6:]} for p in old["todayNew"][:3]],
-    "weekly": {"period": {"start": start, "end": end}, "summary": b["weeklySummary"], "reportId": "weekly-" + start}})
+    "weekly": {"period": {"start": start, "end": end}, "summary": b["weeklySummary"], "reportId": "weekly-" + start},
+    "accepted": [{"paper": ref("openreview-imcyVlzpXh", "Multi-agent Architecture Search via Agentic Supernet"), "venue": "ICML 2025", "kind": "upgraded"}]})
 write(R + "overview.json", {**resp("overview"), "paperTotal": old["overview"]["paperTotal"], "relevantTotal": 1874,
     "newLast7Days": 96, "lastIngestAt": "2026-10-27T01:12:30+08:00"})
 
 STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("classify", "按研究兴趣判定相关性"),
-         ("skim", "读全文速读"), ("recommend", "分出核心 / 邻近 / 热点三类推荐"), ("pick", "挑选精选（≤10 篇）"),
+         ("skim", "读全文速读"), ("recommend", "分出核心 / 邻近 / 热点三类推荐"), ("pick", "挑选精选（≤10 篇）"), ("new-accepted", "每周：新中稿入库"),
          ("deep-read", "写精读"), ("results", "更新结果表"), ("map", "领域地图重组"), ("must-read", "更新必读"),
          ("classics", "更新经典"), ("interests", "更新候选关键词"), ("research-lines", "推进研究线"),
          ("hotspots", "整理热点"), ("report", "生成报告"), ("push", "推送 Telegram")]
@@ -78,7 +79,7 @@ write(R + "recommendations-day.json", {**resp("recommendations-day"), "date": "2
      "quality": {"score": 8.0, "rationale": "设计期、运行期、事后归因三阶段都有实验"},
      "category": "core", "reason": "命中关键词“优化过程的可解释性”“节点级归因”",
      "matchedKeywords": [{"nodeId": "kw-opt-explain", "label": "优化过程的可解释性"}],
-     "score": 0.91, "picked": True, "user": user("arxiv-2610.17613")},
+     "score": 0.91, "picked": True, "user": user("arxiv-2610.17613"), "sources": ["智能体", "Hugging Face"]},
     {"id": "arxiv-2610.05284", "titleZh": "DAGO 用上下文老虎机引导的多父代工作流融合将六项基准宏平均分提升至 81.7",
      "titleEn": "Fusion is the New Mutation: Bandit-Guided Evolution on Workflow Graphs",
      "summary": "将多父代工作流融合建模为上下文老虎机臂选择问题，在相同验证预算下超越 AFlow。",
@@ -127,6 +128,11 @@ write(R + "resolve-result.json", {**resp("resolve-result", False),
 write(R + "paper-user.json", {**resp("paper-user", False), **user("arxiv-2610.17613", rating=4, flags=["收藏"], relevance="相关", updatedAt=GEN)})
 write(R + "queue.json", {**resp("queue", False), "paperIds": ["arxiv-2610.17613"], "updatedAt": GEN})
 write(R + "preferences.json", {**resp("preferences", False), "needCode": False, "updatedAt": None})
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from pwb.daily import DEFAULTS as REC_DEFAULTS  # noqa: E402
+write(R + "recommend-settings.json", {**resp("recommend-settings", False), **REC_DEFAULTS,
+    "sources": {"huggingface": True, "streams": {"agent": True}}, "updatedAt": None,
+    "streams": [{"key": "agent", "name": "智能体", "query": "abs:agent"}], "profileProblem": None})
 write(R + "idea-notes.json", {**resp("idea-notes", False), "notes": {"line-conservecut": "先确认 replay gap 的口径"}, "updatedAt": GEN})
 
 ev_own = {"kind": "paper", "ref": "openreview-AbCdEf1234", "title": "（示例）我的投稿", "quote": "（示例：论文中的原文摘录）"}
@@ -164,11 +170,11 @@ write(R + "map.json", {**resp("map"),
     "benchmarksAndBaselines": [{"name": "AFlow", "kind": "baseline", "usedByCount": 53, "note": "最强工作流搜索基线之一"}],
     "gaps": [{"title": "失败归因", "kind": "gap", "metric": "仅 4 篇", "note": "很少有工作分析某个架构为什么在某类题上失败", "sources": []}],
     "categories": [{"routeKey": "static-sop", "name": "静态分工与 SOP 工作流", "paperCount": 418, "note": "预定义角色与流程"}],
-    "hotspots": {"source": "arXiv 计算机类、标题或摘要含 agent 的论文（不限是否中稿）", "months": ["2026-07", "2026-08", "2026-09"],
+    "hotspots": [{"stream": "agent", "name": "智能体", "source": "arXiv 上智能体方向的论文（检索词 abs:agent，分类 cs*，不限是否中稿）", "months": ["2026-07", "2026-08", "2026-09"],
                  "totals": [2600, 2800, 3000],
                  "items": [{"name": "Agent Skills", "summary": "把可复用的能力打包成技能，按需加载给智能体。",
                             "terms": ["agent skills", "skill library"], "counts": [40, 66, 95], "onset": "2026-07", "peak": "2026-09",
-                            "recentSharePct": 2.4, "examples": [ref("arxiv-2609.01234", "SkillBench")]}]}})
+                            "recentSharePct": 2.4, "examples": [ref("arxiv-2609.01234", "SkillBench")]}]}]})
 write(R + "results-index.json", {**resp("results-index"), "categories": [
     {"name": "数学", "benchmarks": [{"key": "gsm8k", "name": "GSM8K", "entryCount": 2}]}]})
 write(R + "results-benchmark.json", {**resp("results-benchmark"),
@@ -248,6 +254,7 @@ write(B + "interests-extraction.json", {"overview": "（示例）关注多智能
         {"label": "多智能体架构搜索", "summary": "示例二级关键词", "evidence": [ev_maas], "children": [
             {"label": "查询自适应的超网采样", "summary": "示例三级关键词", "evidence": [ev_maas]}]}]}]})
 write(B + "llm-settings-put.json", {"engine": "deepseek", "model": "deepseek-reasoner"})
+write(B + "recommend-settings-put.json", {"schedule": {"time": "01:00"}, "skim": {"fullText": ["core", "adjacent", "trending"]}})
 write(B + "task-create.json", {"type": "deep-read", "params": {"paperId": "arxiv-2610.17613"}})
 write(B + "task-create.周报.json", {"type": "generate-report", "params": {"type": "weekly", "period": {"start": "2026-10-19", "end": "2026-10-25"}}})
 print("examples written to", OUT)

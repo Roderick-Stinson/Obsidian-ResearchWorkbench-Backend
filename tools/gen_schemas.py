@@ -31,7 +31,7 @@ LINE_ID = {"type": "string", "pattern": r"^line-[a-z0-9-]+$"}
 LLM_ENGINES = ["claude-code", "codex", "deepseek"]
 BASIS = obj({"ownPapers": INT, "watchedPapers": INT, "relevantPapers": INT})
 CLAIM_TARGET = obj({"kind": enum("paper", "reproGroup", "experimentNote"), "id": TEXT})
-STEP_KEYS = ["fetch", "version-check", "classify", "skim", "recommend", "pick", "deep-read", "results", "map",
+STEP_KEYS = ["fetch", "version-check", "classify", "skim", "recommend", "pick", "new-accepted", "deep-read", "results", "map",
              "must-read", "classics", "interests", "research-lines", "hotspots", "report", "push"]
 
 PAPER_USER = obj({"paperId": PID, "rating": {"type": "integer", "minimum": 0, "maximum": 5}, "flags": FLAGS,
@@ -90,6 +90,7 @@ TASK_TYPES = {
     "rebuild-map": {"type": "object", "maxProperties": 0},
     "rebuild-classics": {"type": "object", "maxProperties": 0},
     "rebuild-interests": {"type": "object", "maxProperties": 0},
+    "run-daily": {"type": "object", "maxProperties": 0},
     "retry-step": obj({"runId": TEXT, "step": enum(*STEP_KEYS)}),
     "ingest-paper": obj({"url": URL, "watch": BOOL}),
     "claim-run": obj({"runId": TEXT, "target": CLAIM_TARGET}),
@@ -113,10 +114,33 @@ CLASSIC_EVIDENCE = obj({"libraryCitations": nullable(INT), "citations": nullable
                         "githubStars": nullable(INT), "codeUrl": nullable(URL)})
 COUNTS = obj({"core": INT, "adjacent": INT, "trending": INT})
 
+def closed(props, optional=None, **kw):
+    s = obj(props, optional=props.keys() if optional is None else optional)
+    s["additionalProperties"] = False
+    s.update(kw)
+    return s
+
+CATS = enum("core", "adjacent", "trending")
+def rng(lo, hi): return {"type": "integer", "minimum": lo, "maximum": hi}
+WEIGHT = {"type": "number", "minimum": 0, "maximum": 1}
+# 每日推荐设置的各个部分（返回体里每项都有；修改时每项都可省略，只改给了的）。
+REC_SETTINGS = {
+    "schedule": {"enabled": BOOL, "time": {"type": "string", "pattern": r"^([01]\d|2[0-3]):[0-5]\d$"}, "maxCatchupDays": rng(1, 30),
+                 "weeklyDay": rng(1, 7)},
+    "sources": {"huggingface": BOOL, "streams": {"type": "object", "additionalProperties": BOOL}},
+    "screen": {"batchSize": rng(5, 100), "negativeExamples": rng(0, 200)},
+    "adjacent": {"seeds": arr(enum("own", "watched", "relevant", "library"), uniqueItems=True), "lookbackDays": rng(1, 30)},
+    "trending": {"minHfUpvotes": rng(0, 10000), "useHotspots": BOOL, "hotspotMinHfUpvotes": rng(0, 10000), "maxPerDay": rng(0, 500)},
+    "skim": {"fullText": arr(CATS, uniqueItems=True), "maxFullTextPerDay": rng(0, 500)},
+    "pick": {"max": rng(0, 30), "weights": closed({k: WEIGHT for k in ("relevance", "quality", "hf", "code")})},
+    "weekly": {"newAccepted": BOOL, "map": BOOL, "classics": BOOL},
+    "library": {"autoAdd": arr(CATS, uniqueItems=True)},
+}
+
 # kind -> (title, body, generated)
 responses = {
-    "health": ("服务状态", obj({"status": enum("ok", "degraded"), "version": TEXT, "time": DT, "taskTypes": arr(TEXT)},
-                             optional=("taskTypes",)), False),
+    "health": ("服务状态", obj({"status": enum("ok", "degraded"), "version": TEXT, "time": DT, "taskTypes": arr(TEXT), "timezone": TEXT},
+                             optional=("taskTypes", "timezone")), False),
     "jobs": ("后台长任务进度", obj({"items": arr(obj({
         "key": TEXT, "name": TEXT, "status": enum("idle", "running", "stalled", "done"),
         "progress": nullable(obj({"done": INT, "total": INT})), "message": STR, "updatedAt": nullable(DT)}))}), True),
@@ -137,9 +161,10 @@ responses = {
     "brief": ("每日简报", obj({
         "date": DATE, "updatedAt": DT, "newCount": INT, "pickedCount": INT, "summary": STR,
         "highlights": arr(obj({"title": TEXT, "text": TEXT, "sources": arr(PREF, minItems=1)})),
-        "picks": arr({"allOf": [BRIEF_PAPER, obj({"reason": STR})]}, maxItems=10),
+        "picks": arr({"allOf": [BRIEF_PAPER, obj({"reason": STR})]}, maxItems=30),
         "todayNew": arr(BRIEF_PAPER),
-        "weekly": nullable(obj({"period": PERIOD, "summary": TEXT, "reportId": nullable(STR)}))}), True),
+        "weekly": nullable(obj({"period": PERIOD, "summary": TEXT, "reportId": nullable(STR)})),
+        "accepted": arr(obj({"paper": PREF, "venue": STR, "kind": enum("upgraded", "new")}))}, optional=("accepted",)), True),
     "recommendations-index": ("往期推荐", obj({
         "issues": arr(obj({"date": DATE, "counts": COUNTS, "pickedCount": INT}))}), True),
     "recommendations-day": ("单日推荐", obj({
@@ -149,7 +174,8 @@ responses = {
             "codeUrl": nullable(URL), "hfUpvotes": INT, "citations": CITATIONS,
             "quality": obj({"score": SCORE10, "rationale": STR}),
             "category": enum("core", "adjacent", "trending"), "reason": TEXT,
-            "matchedKeywords": arr(KW_REF), "score": SCORE1, "picked": BOOL, "user": USER}))}), True),
+            "matchedKeywords": arr(KW_REF), "score": SCORE1, "picked": BOOL, "user": USER, "sources": arr(TEXT)},
+            optional=("sources",)))}), True),
     "paper-list": ("论文列表", obj({"items": arr(PAPER_SUMMARY), "nextCursor": nullable(STR), "total": INT,
                                  "facets": obj({k: arr(obj({"label": TEXT, "count": INT})) for k in ("topic", "venue", "year", "status", "relevance")})},
                                 optional=("facets",)), False),
@@ -201,9 +227,9 @@ responses = {
                                            "usedByCount": INT, "note": STR})),
         "gaps": arr(obj({"title": TEXT, "kind": enum("gap", "finding"), "metric": STR, "note": STR, "sources": PREFS})),
         "categories": arr(obj({"routeKey": TEXT, "name": TEXT, "paperCount": INT, "note": STR})),
-        "hotspots": obj({"source": TEXT, "months": arr(MONTH), "totals": arr(INT), "items": arr(obj({
+        "hotspots": arr(obj({"stream": TEXT, "name": TEXT, "source": TEXT, "months": arr(MONTH), "totals": arr(INT), "items": arr(obj({
             "name": TEXT, "summary": STR, "terms": arr(TEXT), "counts": arr(INT), "onset": MONTH, "peak": MONTH,
-            "recentSharePct": NUM, "examples": PREFS}))})}, optional=("hotspots",)), True),
+            "recentSharePct": NUM, "examples": PREFS}))}))}, optional=("hotspots",)), True),
     "results-index": ("结果表目录", obj({"categories": arr(obj({
         "name": enum("数学", "代码生成", "问答", "知识与综合推理", "智能体 / 交互环境", "其它"),
         "benchmarks": arr(obj({"key": {"type": "string", "pattern": "^[a-z0-9-]+$"}, "name": TEXT,
@@ -258,17 +284,13 @@ responses = {
         "engine": enum(*LLM_ENGINES), "updatedAt": nullable(DT),
         "engines": arr(obj({"key": enum(*LLM_ENGINES), "name": TEXT, "ready": BOOL, "detail": STR,
                             "model": nullable(STR), "defaultModel": nullable(STR)}))}), False),
+    "recommend-settings": ("每日推荐设置", obj({**{k: closed(v, optional=()) for k, v in REC_SETTINGS.items()}, "updatedAt": nullable(DT),
+        "streams": arr(obj({"key": TEXT, "name": TEXT, "query": TEXT})), "profileProblem": nullable(STR)}), False),
     "task": ("后台任务", TASK, False),
     "task-list": ("后台任务列表", obj({"items": arr(TASK)}), False),
     "error": ("错误", obj({"error": obj({"code": enum("invalid_params", "unauthorized", "not_found", "conflict", "unavailable", "internal"),
                                           "message": TEXT, "details": {}}, optional=("details",))}), False),
 }
-
-def closed(props, optional=None, **kw):
-    s = obj(props, optional=props.keys() if optional is None else optional)
-    s["additionalProperties"] = False
-    s.update(kw)
-    return s
 
 # 请求体：没有 kind，按文件名选 schema。
 bodies = {
@@ -288,6 +310,7 @@ bodies = {
     "interests-extraction": ("一次关键词整理结果", obj({"overview": TEXT, "basis": BASIS,
                                                     "domains": arr(extraction_node(1), minItems=1)})),
     "llm-settings-put": ("切换大模型引擎", closed({"engine": enum(*LLM_ENGINES), "model": nullable(STR)}, optional=("model",))),
+    "recommend-settings-put": ("修改每日推荐设置", closed({k: closed(v) for k, v in REC_SETTINGS.items()}, minProperties=1)),
     "task-create": ("创建后台任务", typed_params(closed({"type": enum(*TASK_TYPES), "params": {"type": "object"}}, optional=()))),
 }
 

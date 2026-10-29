@@ -46,7 +46,11 @@
         "own": false,
         "discussionStatus": null,
         "updatedAt": null
-      }
+      },
+      "sources": [
+        "智能体",
+        "Hugging Face"
+      ]
     },
     {
       "id": "arxiv-2610.05284",

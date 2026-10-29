@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/recommend-settings-put.schema.json",
+  "title": "修改每日推荐设置",
+  "type": "object",
+  "properties": {
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+        },
+        "maxCatchupDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        },
+        "weeklyDay": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "object",
+      "properties": {
+        "huggingface": {
+          "type": "boolean"
+        },
+        "streams": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "screen": {
+      "type": "object",
+      "properties": {
+        "batchSize": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 100
+        },
+        "negativeExamples": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "adjacent": {
+      "type": "object",
+      "properties": {
+        "seeds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "own",
+              "watched",
+              "relevant",
+              "library"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "lookbackDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "trending": {
+      "type": "object",
+      "properties": {
+        "minHfUpvotes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "useHotspots": {
+          "type": "boolean"
+        },
+        "hotspotMinHfUpvotes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "maxPerDay": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "skim": {
+      "type": "object",
+      "properties": {
+        "fullText": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "core",
+              "adjacent",
+              "trending"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "maxFullTextPerDay": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "pick": {
+      "type": "object",
+      "properties": {
+        "max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "weights": {
+          "type": "object",
+          "properties": {
+            "relevance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "quality": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "hf": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "code": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "weekly": {
+      "type": "object",
+      "properties": {
+        "newAccepted": {
+          "type": "boolean"
+        },
+        "map": {
+          "type": "boolean"
+        },
+        "classics": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "library": {
+      "type": "object",
+      "properties": {
+        "autoAdd": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "core",
+              "adjacent",
+              "trending"
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false,
+  "minProperties": 1
+}

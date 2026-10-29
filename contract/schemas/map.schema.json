@@ -205,83 +205,94 @@
           }
         },
         "hotspots": {
-          "type": "object",
-          "properties": {
-            "source": {
-              "$ref": "common.schema.json#/$defs/Text"
-            },
-            "months": {
-              "type": "array",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "stream": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "source": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "months": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Month"
+                }
+              },
+              "totals": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
               "items": {
-                "$ref": "common.schema.json#/$defs/Month"
-              }
-            },
-            "totals": {
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "minimum": 0
-              }
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "$ref": "common.schema.json#/$defs/Text"
-                  },
-                  "summary": {
-                    "type": "string"
-                  },
-                  "terms": {
-                    "type": "array",
-                    "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
                       "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "terms": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      }
+                    },
+                    "counts": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "onset": {
+                      "$ref": "common.schema.json#/$defs/Month"
+                    },
+                    "peak": {
+                      "$ref": "common.schema.json#/$defs/Month"
+                    },
+                    "recentSharePct": {
+                      "type": "number"
+                    },
+                    "examples": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "common.schema.json#/$defs/PaperRef"
+                      }
                     }
                   },
-                  "counts": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
-                  },
-                  "onset": {
-                    "$ref": "common.schema.json#/$defs/Month"
-                  },
-                  "peak": {
-                    "$ref": "common.schema.json#/$defs/Month"
-                  },
-                  "recentSharePct": {
-                    "type": "number"
-                  },
-                  "examples": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "common.schema.json#/$defs/PaperRef"
-                    }
-                  }
-                },
-                "required": [
-                  "name",
-                  "summary",
-                  "terms",
-                  "counts",
-                  "onset",
-                  "peak",
-                  "recentSharePct",
-                  "examples"
-                ]
+                  "required": [
+                    "name",
+                    "summary",
+                    "terms",
+                    "counts",
+                    "onset",
+                    "peak",
+                    "recentSharePct",
+                    "examples"
+                  ]
+                }
               }
-            }
-          },
-          "required": [
-            "source",
-            "months",
-            "totals",
-            "items"
-          ]
+            },
+            "required": [
+              "stream",
+              "name",
+              "source",
+              "months",
+              "totals",
+              "items"
+            ]
+          }
         }
       },
       "required": [

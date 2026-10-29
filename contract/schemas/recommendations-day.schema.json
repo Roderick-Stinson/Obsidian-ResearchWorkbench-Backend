@@ -166,6 +166,12 @@
               },
               "user": {
                 "$ref": "common.schema.json#/$defs/PaperUser"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
               }
             },
             "required": [

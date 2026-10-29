@@ -100,7 +100,7 @@ def cmd_landscape(args, settings):
 
 
 def cmd_feed(args, settings):
-    """取 arXiv 上整个智能体方向的论文（按月），给热点演变用。"""
+    """按 profile.json 的 streams 取 arXiv 论文流（按月），给热点演变用。"""
     from . import feed
     from .store import Store
     feed.fetch(Store(settings), since=args.since, log=lambda m: print(m, flush=True), refresh=args.refresh)
@@ -117,6 +117,21 @@ def cmd_sync_contract(args, settings):
     for name in ("validate.py", "数据格式约定.md"):
         shutil.copy2(src / name, CONTRACT_DIR / name)
     print("已同步约定：", src, "→", CONTRACT_DIR)
+
+
+def cmd_service(args, settings):
+    """开机自启：install / uninstall / status（见 pwb/service.py）。"""
+    from . import service
+    print({"install": lambda: service.install(settings), "uninstall": service.uninstall, "status": service.status}[args.action]())
+
+
+def cmd_daily(args, settings):
+    """在终端里跑一次每日推荐（和面板“立刻刷新今天的推荐”一样）。要在干净的终端里运行，不要在 Claude Code 会话里。"""
+    from . import daily, llm
+    from .store import Store
+    store = Store(settings)
+    msg, _ = daily.run(store, llm.get_config(store), lambda done, total, m: print("[{}/{}] {}".format(done, total, m), flush=True), only=args.step)
+    print(msg)
 
 
 def main(argv=None):
@@ -145,7 +160,11 @@ def main(argv=None):
     p = sub.add_parser("landscape", help="整理经典与必读、领域发展史")
     p.add_argument("steps", nargs="*", default=["refs", "classics", "map"], help="refs / classics / map，默认全部")
     p.add_argument("--refresh", action="store_true", help="参考文献全部重新取")
-    p = sub.add_parser("feed", help="取 arXiv 上整个智能体方向的论文（按月），给热点演变用")
+    p = sub.add_parser("daily", help="跑一次每日推荐（平时由后端按设置的时间自动跑）")
+    p.add_argument("--step", help="只跑某一步，如 fetch / classify / skim / pick / new-accepted")
+    p = sub.add_parser("service", help="开机自启：install / uninstall / status")
+    p.add_argument("action", choices=["install", "uninstall", "status"])
+    p = sub.add_parser("feed", help="按 profile.json 的 streams 取 arXiv 论文流（按月），给热点演变用")
     p.add_argument("--since", default="2023-07", help="从哪个月开始，默认 2023-07")
     p.add_argument("--refresh", action="store_true", help="取过的月份也重新取")
     p = sub.add_parser("sync-contract", help="从 vault 同步约定到 contract/")
@@ -154,7 +173,7 @@ def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     settings = Settings(data_dir=args.data_dir)
     {"serve": cmd_serve, "seed-examples": cmd_seed_examples, "import-vault": cmd_import_vault, "apply-interests": cmd_apply_interests, "survey": cmd_survey, "dblp-index": cmd_dblp_index, "dblp-verify": cmd_dblp_verify, "fetch-pdfs": cmd_fetch_pdfs, "landscape": cmd_landscape,
-     "feed": cmd_feed, "sync-contract": cmd_sync_contract}[args.command](args, settings)
+     "feed": cmd_feed, "sync-contract": cmd_sync_contract, "daily": cmd_daily, "service": cmd_service}[args.command](args, settings)
 
 
 if __name__ == "__main__":

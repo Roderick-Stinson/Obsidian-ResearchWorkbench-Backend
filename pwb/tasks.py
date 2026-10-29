@@ -1,4 +1,4 @@
-"""后台任务（约定第 6 节）。单线程按提交顺序执行；骨架阶段只有 claim-run 真正实现。"""
+"""后台任务（约定第 6 节）。单线程按提交顺序执行。"""
 import logging
 import threading
 
@@ -59,11 +59,12 @@ def rebuild_map(store, params, progress):
     try:
         if store.get_doc("classics") is None:
             rebuild_classics(store, {}, progress)
-        if store.get_kv("feed-months"):
-            # 只重新取最近两个月的 arXiv 论文（之前的月份已经取过），几十秒。取不到就用已有的数据。
-            from . import feed
+        from . import feed
+        since = feed.fetched_since(store)
+        if since:
+            # 只重新取最近两个月的 arXiv 论文（之前的月份已经取过；新加的流从头取）。取不到就用已有的数据。
             try:
-                feed.fetch(store, since=min(store.get_kv("feed-months")), log=lambda m: progress(3, 3, "更新 arXiv 论文流：" + m))
+                feed.fetch(store, since=since, log=lambda m: progress(3, 3, "更新 arXiv 论文流：" + m))
             except Exception as e:  # noqa: BLE001 — 网络问题不影响用已有数据整理
                 progress(3, 3, "arXiv 论文流没更新成功（{}），用已有数据".format(type(e).__name__))
         progress(3, 3, "正在整理领域发展史")
@@ -73,7 +74,25 @@ def rebuild_map(store, params, progress):
     return "{} 个发展阶段、{} 条研究空白与发现".format(len(doc["stages"]), len(doc["gaps"])), [{"kind": "data", "path": "/map"}]
 
 
-HANDLERS = {"claim-run": claim_run, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map}
+def run_daily(store, params, progress):
+    """每日推荐流水线（定时提交，或面板“立刻刷新今天的推荐”）。"""
+    from . import daily, llm
+    return daily.run(store, llm.get_config(store), progress)
+
+
+def retry_step(store, params, progress):
+    """流程明细里的“重跑”：只重跑这一步（用那次运行的日期）。"""
+    from . import daily, llm
+    run = (store.get_doc("pipeline") or {}).get("latestRun")
+    if not run or run["runId"] != params["runId"]:
+        raise TaskFailed("只能重跑最近一次运行的步骤：" + params["runId"])
+    if params["step"] not in dict(daily.STEPS):
+        raise TaskFailed("每日流水线里没有这一步：" + params["step"])
+    return daily.run(store, llm.get_config(store), progress, only=params["step"], date=run["date"])
+
+
+HANDLERS = {"claim-run": claim_run, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map,
+            "run-daily": run_daily, "retry-step": retry_step}
 
 
 def run_task(store, task):

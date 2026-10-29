@@ -102,8 +102,8 @@ def test_map_needs_classics_and_refs(client, store, monkeypatch):
 
 def test_hotspots_order_by_onset(store, monkeypatch):
     """三个说法先后冒出来：harness → skills → memory；热点按起势时间排序。"""
-    from pwb import feed, hotspots, survey
-    survey.profile_path(store).write_text(json.dumps({"arxiv": {"query": "abs:agent", "field": "智能体"}}), encoding="utf-8")
+    from pwb import feed, hotspots, profile
+    profile.path(store).write_text(json.dumps({"streams": [{"key": "agent", "name": "智能体", "query": "abs:agent"}]}), encoding="utf-8")
     feed.init(store)
     months = feed.months("2025-01", "2025-12")
     filler = "We study planning with tool calls and evaluate reasoning benchmarks for web navigation."
@@ -117,10 +117,11 @@ def test_hotspots_order_by_onset(store, monkeypatch):
                 text += " Agent skills are loaded on demand."
             if k >= 9 and 45 <= j < 75:
                 text += " Agent memory stores past episodes."
-            rows.append(("{}.{:05d}".format(m.replace("-", "")[2:], j), m, m + "-15", "Paper " + str(j) + " agent", text, '["cs.AI"]'))
-    rows.append(("2601.00001", "2026-01", "2026-01-02", "Current month agent", filler, '["cs.AI"]'))
+            rows.append(("agent", "{}.{:05d}".format(m.replace("-", "")[2:], j), m, m + "-15", "Paper " + str(j) + " agent", text, '["cs.AI"]'))
+    rows.append(("agent", "2601.00001", "2026-01", "2026-01-02", "Current month agent", filler, '["cs.AI"]'))
+    rows.append(("other", "2501.99999", "2025-01", "2025-01-15", "Other stream agent harness", filler, '["cs.AI"]'))
     with store.conn() as c:
-        c.executemany("INSERT INTO arxiv_feed VALUES (?, ?, ?, ?, ?, ?)", rows)
+        c.executemany("INSERT INTO arxiv_feed VALUES (?, ?, ?, ?, ?, ?, ?)", rows)
 
     seen = {}
 
@@ -130,7 +131,7 @@ def test_hotspots_order_by_onset(store, monkeypatch):
                              {"name": "Agent Skills", "summary": "", "terms": ["agent skills", "编造的词组"]},
                              {"name": "Harness", "summary": "", "terms": ["agent harness"]}]}
     monkeypatch.setattr(llm, "complete_json", fake)
-    hot = hotspots.build(store, {"engine": "claude-code"}, log=lambda m: None)
+    hot = hotspots.build(store, {"engine": "claude-code"}, profile.streams(store)[0], log=lambda m: None)
     assert hot["months"] == months, "当月没过完，不算"
     assert "agent harness" in seen["prompt"] and "evaluate reasoning" not in seen["prompt"], "一直都有的词组不算热点"
     assert [h["name"] for h in hot["items"]] == ["Harness", "Agent Skills", "记忆（Memory）"]
@@ -138,26 +139,47 @@ def test_hotspots_order_by_onset(store, monkeypatch):
     assert hot["items"][1]["terms"] == ["agent skills"], "编造的词组丢掉"
     assert hot["items"][2]["counts"][-1] == 30 and hot["items"][2]["recentSharePct"] == 30.0
     assert "智能体方向（检索词 abs:agent）" in seen["prompt"] and "\nagent |" not in seen["prompt"], "检索词本身不算热点"
-    assert "abs:agent" in hot["source"] and "_field" not in hotspots.public(hot)
+    assert "abs:agent" in hot["source"] and (hot["stream"], hot["name"]) == ("agent", "智能体")
+    assert hot["totals"][0] == 100, "别的流的论文不算进来"
+    assert [name for name, _ in hotspots.current(hot)] == ["Harness", "Agent Skills", "记忆（Memory）"], "三个都还在峰值"
+    assert dict(hotspots.current(hot))["Agent Skills"] == {"agent skill"}, "词组归一化，和每日推荐里的匹配方式一致"
+    faded = {**hot, "items": [{**hot["items"][0], "counts": [0, 0, 0, 30, 30, 30, 30, 30, 30, 0, 0, 0]}]}
+    assert hotspots.current(faded) == [], "退下去的热点不算正在热"
 
 
-def test_feed_requires_profile_and_refetches_on_new_query(store, monkeypatch):
-    from pwb import feed, survey
-    with pytest.raises(FileNotFoundError, match="arxiv.query"):
+def test_feed_streams_and_query_change(store, monkeypatch):
+    from pwb import feed, profile
+    with pytest.raises(FileNotFoundError, match="streams"):
         feed.fetch(store, since="2026-01")
     queries = []
-    monkeypatch.setattr(feed, "fetch_month", lambda store, month, prof, log=print: queries.append((month, prof["query"])) or (0, 0))
+    monkeypatch.setattr(feed, "fetch_month", lambda store, stream, month, log=print: queries.append((stream["key"], month, stream["query"])) or (0, 0))
     monkeypatch.setattr(feed, "months", lambda since, until=None: ["2026-01", "2026-02", "2026-03"])
-    path = survey.profile_path(store)
-    path.write_text(json.dumps({"arxiv": {"query": "abs:agent"}}), encoding="utf-8")
+    path = profile.path(store)
+    path.write_text(json.dumps({"streams": [{"key": "a", "query": "abs:agent"}, {"key": "b", "query": "abs:rag"}]}), encoding="utf-8")
     feed.fetch(store, since="2026-01")
-    feed.fetch(store, since="2026-01")
-    assert [m for m, _ in queries] == ["2026-01", "2026-02", "2026-03", "2026-02", "2026-03"], "取过的老月份不重取"
+    feed.fetch(store, since="2026-01", only=["a"])
+    assert [(k, m) for k, m, _ in queries] == [("a", "2026-01"), ("a", "2026-02"), ("a", "2026-03"), ("b", "2026-01"), ("b", "2026-02"),
+                                               ("b", "2026-03"), ("a", "2026-02"), ("a", "2026-03")], "取过的老月份不重取"
     with store.conn() as c:
-        c.execute("INSERT INTO arxiv_feed VALUES ('2601.00001', '2026-01', '2026-01-02', 't', 'a', '[]')")
-    path.write_text(json.dumps({"arxiv": {"query": "abs:rag", "field": "RAG"}}), encoding="utf-8")
+        c.execute("INSERT INTO arxiv_feed VALUES ('a', '2601.00001', '2026-01', '2026-01-02', 't', 'a', '[]')")
+        c.execute("INSERT INTO arxiv_feed VALUES ('b', '2601.00002', '2026-01', '2026-01-02', 't', 'a', '[]')")
+    path.write_text(json.dumps({"streams": [{"key": "a", "query": "abs:agents"}, {"key": "b", "query": "abs:rag"}]}), encoding="utf-8")
     queries.clear()
     feed.fetch(store, since="2026-01")
-    assert queries == [("2026-01", "abs:rag"), ("2026-02", "abs:rag"), ("2026-03", "abs:rag")], "换了检索词全部重取"
+    assert [(k, m) for k, m, _ in queries] == [("a", "2026-01"), ("a", "2026-02"), ("a", "2026-03"), ("b", "2026-02"), ("b", "2026-03")], "只重取改了检索词的流"
     with store.conn() as c:
-        assert c.execute("SELECT COUNT(*) FROM arxiv_feed").fetchone()[0] == 0, "旧检索词的论文流作废"
+        assert [r[0] for r in c.execute("SELECT stream FROM arxiv_feed")] == ["b"], "改了检索词的流，旧数据作废"
+    assert feed.fetched_since(store) == "2026-01"
+
+
+def test_feed_migrates_single_stream_table(store):
+    from pwb import feed, profile
+    with store.conn() as c:
+        c.execute("CREATE TABLE arxiv_feed (arxiv_id TEXT PRIMARY KEY, month TEXT NOT NULL, published TEXT NOT NULL, "
+                  "title TEXT NOT NULL, abstract TEXT NOT NULL, cats TEXT NOT NULL)")
+        c.execute("INSERT INTO arxiv_feed VALUES ('2601.00001', '2026-01', '2026-01-02', 't', 'a', '[]')")
+    store.set_kv("feed-months", {"2026-01": {"total": 1, "kept": 1, "at": "x"}})
+    profile.path(store).write_text(json.dumps({"streams": [{"key": "agent", "query": "abs:agent"}]}), encoding="utf-8")
+    feed.init(store)
+    assert list(feed.monthly_docs(store, "agent")) == ["2026-01"]
+    assert store.get_kv("feed-streams")["agent"]["months"] == {"2026-01": {"total": 1, "kept": 1, "at": "x"}}

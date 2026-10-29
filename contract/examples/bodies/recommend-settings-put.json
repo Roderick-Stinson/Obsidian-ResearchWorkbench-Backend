@@ -1,0 +1,12 @@
+{
+  "schedule": {
+    "time": "01:00"
+  },
+  "skim": {
+    "fullText": [
+      "core",
+      "adjacent",
+      "trending"
+    ]
+  }
+}

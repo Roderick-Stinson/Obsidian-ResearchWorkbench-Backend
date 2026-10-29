@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta
 
-from . import hotspots, llm
+from . import hotspots, llm, profile
 from .dblp import NOT_MAIN
 from .survey import _direction_text, _norm_title, _safe_id, _topics, _venue_short
 from .util import TZ, dumps, now
@@ -404,7 +404,12 @@ def build_map(store, config, log):
                   "note": "论文库里 {} 篇引用（{}）".format(it["evidence"]["libraryCitations"], r["name"])}
                  for r in classics["routes"] if r["name"] != GENERAL for it in r["items"]]
     baselines = sorted(baselines, key=lambda x: -x["usedByCount"])[:10]
-    hot = hotspots.build(store, config, log)
+    try:
+        streams = profile.streams(store)
+    except FileNotFoundError as e:
+        log(str(e) + "，跳过热点演变")
+        streams = []
+    hots = [h for h in (hotspots.build(store, config, s, log) for s in streams) if h]
 
     # 给大模型的可引用论文：C = 经典工作，P = 论文库里每年的代表论文。
     refs, lines = {}, []
@@ -425,15 +430,15 @@ def build_map(store, config, log):
                                                                 (d.get("citations") or {}).get("count") or 0))
     # H = 全领域热点的代表论文（arXiv 最近三个月），让最近的阶段能引用到还没进论文库的新工作。
     hot_lines = []
-    for h in (hot or {}).get("items", []):
+    for hot, h in ((hot, h) for hot in hots for h in hot["items"]):
         keys = []
         for p in h["examples"]:
             key = "H{}".format(len(refs))
             refs[key] = {**{k: v for k, v in p.items() if k != "_month"}, "_date": p["_month"], "_venue": "arXiv"}
             keys.append(key)
             lines.append("{} | {} | arXiv | 热点：{}".format(key, p["title"], h["name"]))
-        hot_lines.append("- {}：{}起势，{}达到峰值，最近占{}论文的 {}%（词组：{}；代表论文 {}）".format(
-            h["name"], h["onset"], h["peak"], hot["_field"], h["recentSharePct"], "、".join(h["terms"][:6]), "、".join(keys) or "无"))
+        hot_lines.append("- [{}] {}：{}起势，{}达到峰值，最近占{}论文的 {}%（词组：{}；代表论文 {}）".format(
+            hot["name"], h["name"], h["onset"], h["peak"], hot["name"], h["recentSharePct"], "、".join(h["terms"][:6]), "、".join(keys) or "无"))
     stats = ["- {}：{} 篇".format(t, counts[t]) for t in topic_list if counts.get(t)] + \
             ["- 趋势：{} 近一年 {} 篇，变化 {:+d}%".format(t["direction"], t["paperCount"], t["changePct"]) for t in trend]
     ms = {"type": "object", "additionalProperties": False, "required": ["ref", "text"], "properties": {"ref": {"type": "string"}, "text": {"type": "string"}}}
@@ -448,7 +453,8 @@ def build_map(store, config, log):
                                                                           "metric": {"type": "string"}, "note": {"type": "string"},
                                                                           "refs": {"type": "array", "items": {"type": "string"}}}}}}}
     prompt = "\n".join([_direction_text(store), "",
-                        "请根据下面的经典工作、论文库代表论文、统计数据和整个{}领域的热点演变，梳理这个领域的发展史：".format(hot["_field"] if hot else "研究"),
+                        "请根据下面的经典工作、论文库代表论文、统计数据和{}的热点演变（方括号里是热点属于哪个论文流），梳理这个领域的发展史：".format(
+                            "、".join(h["name"] for h in hots) + "方向" if hots else "整个领域"),
                         "- intro：3–5 句中文，概括领域从哪里起步、现在的重心、正在走向哪里。",
                         "- stages：按时间分 4–6 个阶段，每个阶段写 period（如“2022–2023”；最近两年请细到半年或季度，如“2025 下半年”）、title、description（2–3 句），"
                         "milestones 是这个阶段的标志性工作，ref 必须是下面列表里的编号（C…、P… 或 H…），text 一句中文说明它带来了什么。",
@@ -486,7 +492,7 @@ def build_map(store, config, log):
              "sources": [p for p in (paper_ref(k) for k in g.get("refs", [])) if p]} for g in res.get("gaps", [])]
     doc = {"schemaVersion": 1, "kind": "map", "generatedAt": now(), "runId": "map-" + now()[:10], "intro": untag(res["intro"]),
            "stages": stages, "trends": trend, "benchmarksAndBaselines": benches + baselines, "gaps": gaps, "categories": categories,
-           **({"hotspots": hotspots.public(hot)} if hot else {})}
+           **({"hotspots": [hotspots.public(h) for h in hots]} if hots else {})}
     store.put_doc(doc)
     log("领域发展史：{} 个阶段、{} 个趋势、{} 个评测集 / 基线、{} 条空白与发现".format(len(stages), len(trend), len(benches) + len(baselines), len(gaps)))
     return doc

@@ -1,16 +1,32 @@
 import json
+import os
 import re
 import secrets
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-TZ = ZoneInfo("Asia/Shanghai")
+
+def _local_zone():
+    """时区：环境变量 PWB_TZ（如 Asia/Shanghai、America/New_York），没设就用系统时区。返回 (tzinfo, IANA 名字或 None)。"""
+    name = os.environ.get("PWB_TZ")
+    if name:
+        return ZoneInfo(name), name
+    m = re.search(r"zoneinfo/(.+)$", os.path.realpath("/etc/localtime"))
+    if m:
+        try:
+            return ZoneInfo(m.group(1)), m.group(1)
+        except Exception:  # noqa: BLE001 — 系统时区文件不规范时退回固定偏移
+            pass
+    return datetime.now().astimezone().tzinfo, None
+
+
+TZ, TZ_NAME = _local_zone()
 PAPER_ID_RE = re.compile(r"^[a-z][a-z0-9]*-[A-Za-z0-9._-]+$")
 ARXIV_RE = re.compile(r"arxiv\.org/(?:abs|pdf)/(\d{4}\.\d{4,5})")
 
 
 def now():
-    """带 +08:00 时区的当前时间（约定 2.4）。"""
+    """带时区偏移的当前时间（约定 2.4，时区见 PWB_TZ）。"""
     return datetime.now(TZ).isoformat(timespec="seconds")
 
 

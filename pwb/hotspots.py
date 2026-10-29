@@ -1,4 +1,4 @@
-"""全领域热点演变：在 arXiv 论文流（feed.py，检索词在 data/survey.json 的 arxiv 里配置）里找哪些说法先后冒出来、什么时候成为主流。
+"""全领域热点演变：在 arXiv 论文流（feed.py，每个流的检索词在 data/profile.json 的 streams 里配置，各算各的）里找哪些说法先后冒出来、什么时候成为主流。
 
 做法（数据说了算，大模型只负责归类和起名）：
 1. 每月统计每个词组（1–3 个词）出现在多少篇论文的标题或摘要里，算占当月论文的比例；
@@ -121,23 +121,18 @@ def _moving(xs, k=3):
     return [sum(xs[max(0, i - k + 1):i + 1]) / len(xs[max(0, i - k + 1):i + 1]) for i in range(len(xs))]
 
 
-def build(store, config, log=print):
-    """返回约定里 map.hotspots 的内容；论文流还没取时返回 None。"""
-    docs = feed.monthly_docs(store)
+def build(store, config, stream, log=print):
+    """一个论文流的热点演变（约定里 map.hotspots 的一项）；这个流的数据不足半年时返回 None。"""
+    docs = feed.monthly_docs(store, stream["key"])
     months = sorted(docs)
     if len(months) < 6:
-        log("arXiv 论文流不足半年（先运行 pwb feed），跳过热点演变")
+        log("[{}] arXiv 论文流不足半年（先运行 pwb feed），跳过热点演变".format(stream["name"]))
         return None
-    try:
-        prof = feed.profile(store)
-    except FileNotFoundError as e:
-        log(str(e) + "，跳过热点演变")
-        return None
-    qwords = query_words(prof["query"])
+    qwords = query_words(stream["query"])
     # 当月还没过完，比例不稳定；只用到上个月为止。
     months = months[:-1]
     sizes = {m: len(docs[m]) for m in months}
-    log("统计 {} 个月、{} 篇 arXiv 论文的词组".format(len(months), sum(sizes.values())))
+    log("[{}] 统计 {} 个月、{} 篇 arXiv 论文的词组".format(stream["name"], len(months), sum(sizes.values())))
     monthly, surface = count_grams({m: docs[m] for m in months}, qwords)
     cands, quarters = rising(monthly, sizes, months)
     lines = ["{} | 共 {} 篇 | 各季度占比‰：{}".format(surface.get(g, g), n, " ".join("{}={:.1f}".format(q, share.get(q, 0) * 1000) for q in quarters))
@@ -149,7 +144,7 @@ def build(store, config, log=print):
                                                                  "properties": {"name": {"type": "string"}, "summary": {"type": "string"},
                                                                                 "terms": {"type": "array", "minItems": 1, "items": {"type": "string"}}}}}}}
     prompt = "\n".join([
-        "下面是 arXiv 上{}方向（检索词 {}）论文里，占比上涨最多的词组，以及它们每个季度出现在多少‰的论文里。".format(prof["field"], prof["query"]),
+        "下面是 arXiv 上{}方向（检索词 {}）论文里，占比上涨最多的词组，以及它们每个季度出现在多少‰的论文里。".format(stream["name"], stream["query"]),
         "请把它们归成最多 15 个研究热点：同一个技术对象 / 范式的不同说法归在一起（比如智能体方向里 agent skills、skill library 归一起）。",
         "- name：热点名，中文为主，关键英文术语保留原文（如“Agent Skills”“记忆（Memory）”）；",
         "- summary：一句中文，说这个热点在研究什么；",
@@ -158,7 +153,7 @@ def build(store, config, log=print):
         "宁可少放，也不要放泛泛的词。凑不出专指说法的热点就不要列；",
         "- 只要研究对象、方法、范式类的热点；评测集名字、模型名字（GPT-5、Qwen3 等）、泛泛的词（challenge、framework 之类）不要。", "",
         "<词组列表>", *lines, "</词组列表>"])
-    log("让 {} 把 {} 个上涨词组归成热点".format(llm.ENGINES[config["engine"]]["name"], len(cands)))
+    log("[{}] 让 {} 把 {} 个上涨词组归成热点".format(stream["name"], llm.ENGINES[config["engine"]]["name"], len(cands)))
     res = llm.complete_json(store.settings, config, SYSTEM, prompt, schema)
 
     themes = []
@@ -169,7 +164,8 @@ def build(store, config, log=print):
                            "terms": [surface.get(g, g) for g in terms]})
     # 按归好的词组重新逐月计数（一篇论文命中热点里任意一个词组就算一篇），并找最近的代表论文。
     with store.conn() as c:
-        rows = c.execute("SELECT arxiv_id, month, title, abstract FROM arxiv_feed WHERE month <= ? ORDER BY published DESC", (months[-1],)).fetchall()
+        rows = c.execute("SELECT arxiv_id, month, title, abstract FROM arxiv_feed WHERE stream = ? AND month <= ? ORDER BY published DESC",
+                         (stream["key"], months[-1])).fetchall()
     counts = {i: Counter() for i in range(len(themes))}
     examples = {i: [] for i in range(len(themes))}
     recent = set(months[-3:])
@@ -201,9 +197,9 @@ def build(store, config, log=print):
                       "onset": onset, "peak": peak, "recentSharePct": round(share[-1] * 100, 1),
                       "examples": [_example(store, r) for _, r in best]})
     items.sort(key=lambda x: (x["onset"], x["peak"]))
-    log("热点演变：{} 个热点".format(len(items)))
-    source = "arXiv 上{}方向的论文（检索词 {}，分类 {}，不限是否中稿）".format(prof["field"], prof["query"], "、".join(c.rstrip(".") + "*" for c in prof["categories"]))
-    return {"source": source, "months": months, "totals": totals, "items": items, "_field": prof["field"]}
+    log("[{}] 热点演变：{} 个热点".format(stream["name"], len(items)))
+    source = "arXiv 上{}方向的论文（检索词 {}，分类 {}，不限是否中稿）".format(stream["name"], stream["query"], "、".join(c.rstrip(".") + "*" for c in stream["categories"]))
+    return {"stream": stream["key"], "name": stream["name"], "source": source, "months": months, "totals": totals, "items": items}
 
 
 def _example(store, row):
@@ -213,6 +209,19 @@ def _example(store, row):
 
 
 def public(hot):
-    """去掉内部字段，得到约定里的 map.hotspots。"""
-    return {**{k: v for k, v in hot.items() if not k.startswith("_")}, "items": [{**h, "examples": [{k: v for k, v in p.items() if not k.startswith("_")} for p in h["examples"]]}
+    """去掉内部字段，得到约定里 map.hotspots 的一项。"""
+    return {**hot, "items": [{**h, "examples": [{k: v for k, v in p.items() if not k.startswith("_")} for p in h["examples"]]}
                              for h in hot["items"]]}
+
+
+HOT_NOW = 0.6  # 最近三个月平均占比至少是峰值的这么多，才算“正在热”的热点
+
+
+def current(hot):
+    """正在热的热点：[(热点名, {归一化的词组})]，每日推荐判定“热点”类用。hot 是约定里 map.hotspots 的一项。"""
+    out = []
+    for h in hot.get("items", []):
+        share = _moving([n / t if t else 0 for n, t in zip(h["counts"], hot["totals"])])
+        if share and share[-1] >= HOT_NOW * max(share):
+            out.append((h["name"], {" ".join(_stem(w) for w in TOKEN.findall(t.lower())) for t in h["terms"]}))
+    return out

@@ -388,7 +388,7 @@ def test_cors_allows_obsidian_and_wraps_auth_errors(tmp_path):
 def test_overview_is_live_and_health_lists_task_types(client, seeded):
     body = get(client, "/overview")
     assert body["paperTotal"] == 4 and body["relevantTotal"] == 0 and body["lastIngestAt"]
-    assert get(client, "/health")["taskTypes"] == ["claim-run", "rebuild-classics", "rebuild-interests", "rebuild-map"]
+    assert get(client, "/health")["taskTypes"] == ["claim-run", "rebuild-classics", "rebuild-interests", "rebuild-map", "retry-step", "run-daily"]
 
 
 def test_jobs_report_pdf_download_and_dblp(client, seeded, settings):

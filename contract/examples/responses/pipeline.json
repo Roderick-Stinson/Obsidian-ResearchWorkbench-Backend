@@ -87,6 +87,15 @@
         "error": null
       },
       {
+        "key": "new-accepted",
+        "name": "每周：新中稿入库",
+        "status": "ok",
+        "startedAt": "2026-10-27T01:00:00+08:00",
+        "finishedAt": "2026-10-27T01:20:00+08:00",
+        "attempts": 1,
+        "error": null
+      },
+      {
         "key": "deep-read",
         "name": "写精读",
         "status": "ok",

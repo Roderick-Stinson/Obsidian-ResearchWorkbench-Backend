@@ -195,6 +195,9 @@ class Store:
         chosen = {"topic": topic, "venue": venue, "year": str(year) if year else None, "status": status, "relevance": relevance}
 
         def basic(row, d, u):
+            if d.get("origin") == "recommendation" and not (u["watched"] or u["own"] or u["relevance"] == "相关"):
+                # 每日推荐里你标过、但还没标“相关 / 重点关注 / 本人论文”的论文：存着你的标记，但不算进论文库。
+                return False
             if watched is not None and u["watched"] != watched:
                 return False
             if own is not None and u["own"] != own:
@@ -248,9 +251,13 @@ class Store:
     def library_overview(self):
         week_ago = (datetime.now(TZ) - timedelta(days=7)).isoformat(timespec="seconds")
         with self.conn() as c:
-            total, last = c.execute("SELECT COUNT(*), MAX(added_at) FROM papers").fetchone()
-            relevant = sum(1 for (d,) in c.execute("SELECT data FROM papers") if json.loads(d).get("libraryRelevance") in ("core", "related"))
-            recent = c.execute("SELECT COUNT(*) FROM papers WHERE added_at >= ?", (week_ago,)).fetchone()[0]
+            shown = {r["id"]: r["added_at"] for r in c.execute(
+                "SELECT p.id, p.added_at, p.data, u.watched, u.own, u.relevance FROM papers p LEFT JOIN paper_user u ON u.paper_id = p.id")
+                if json.loads(r["data"]).get("origin") != "recommendation" or r["watched"] or r["own"] or r["relevance"] == "相关"}
+            total, last = len(shown), max(shown.values(), default=None)
+            relevant = sum(1 for (pid, d) in c.execute("SELECT id, data FROM papers")
+                           if pid in shown and json.loads(d).get("libraryRelevance") in ("core", "related"))
+            recent = sum(1 for at in shown.values() if at >= week_ago)
         return {"paperTotal": total, "relevantTotal": relevant, "newLast7Days": recent, "lastIngestAt": last}
 
     def topic_counts(self):

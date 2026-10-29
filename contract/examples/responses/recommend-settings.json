@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "kind": "recommend-settings",
+  "schedule": {
+    "enabled": true,
+    "time": "01:00",
+    "maxCatchupDays": 7,
+    "weeklyDay": 1
+  },
+  "sources": {
+    "huggingface": true,
+    "streams": {
+      "agent": true
+    }
+  },
+  "screen": {
+    "batchSize": 40,
+    "negativeExamples": 20
+  },
+  "adjacent": {
+    "seeds": [
+      "own",
+      "watched",
+      "relevant",
+      "library"
+    ],
+    "lookbackDays": 7
+  },
+  "trending": {
+    "minHfUpvotes": 10,
+    "useHotspots": true,
+    "hotspotMinHfUpvotes": 3,
+    "maxPerDay": 20
+  },
+  "skim": {
+    "fullText": [
+      "core",
+      "adjacent",
+      "trending"
+    ],
+    "maxFullTextPerDay": 50
+  },
+  "pick": {
+    "max": 10,
+    "weights": {
+      "relevance": 0.4,
+      "quality": 0.3,
+      "hf": 0.2,
+      "code": 0.1
+    }
+  },
+  "weekly": {
+    "newAccepted": true,
+    "map": true,
+    "classics": false
+  },
+  "library": {
+    "autoAdd": []
+  },
+  "updatedAt": null,
+  "streams": [
+    {
+      "key": "agent",
+      "name": "智能体",
+      "query": "abs:agent"
+    }
+  ],
+  "profileProblem": null
+}

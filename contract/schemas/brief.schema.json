@@ -112,7 +112,7 @@
               }
             ]
           },
-          "maxItems": 10
+          "maxItems": 30
         },
         "todayNew": {
           "type": "array",
@@ -182,6 +182,31 @@
               "type": "null"
             }
           ]
+        },
+        "accepted": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "paper": {
+                "$ref": "common.schema.json#/$defs/PaperRef"
+              },
+              "venue": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "upgraded",
+                  "new"
+                ]
+              }
+            },
+            "required": [
+              "paper",
+              "venue",
+              "kind"
+            ]
+          }
         }
       },
       "required": [

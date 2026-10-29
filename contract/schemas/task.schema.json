@@ -27,6 +27,7 @@
             "rebuild-map",
             "rebuild-classics",
             "rebuild-interests",
+            "run-daily",
             "retry-step",
             "ingest-paper",
             "claim-run"
@@ -233,6 +234,23 @@
           "if": {
             "properties": {
               "type": {
+                "const": "run-daily"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
                 "const": "retry-step"
               }
             }
@@ -253,6 +271,7 @@
                       "skim",
                       "recommend",
                       "pick",
+                      "new-accepted",
                       "deep-read",
                       "results",
                       "map",

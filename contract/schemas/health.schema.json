@@ -33,6 +33,9 @@
           "items": {
             "$ref": "common.schema.json#/$defs/Text"
           }
+        },
+        "timezone": {
+          "$ref": "common.schema.json#/$defs/Text"
         }
       },
       "required": [

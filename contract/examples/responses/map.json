@@ -57,42 +57,46 @@
       "note": "预定义角色与流程"
     }
   ],
-  "hotspots": {
-    "source": "arXiv 计算机类、标题或摘要含 agent 的论文（不限是否中稿）",
-    "months": [
-      "2026-07",
-      "2026-08",
-      "2026-09"
-    ],
-    "totals": [
-      2600,
-      2800,
-      3000
-    ],
-    "items": [
-      {
-        "name": "Agent Skills",
-        "summary": "把可复用的能力打包成技能，按需加载给智能体。",
-        "terms": [
-          "agent skills",
-          "skill library"
-        ],
-        "counts": [
-          40,
-          66,
-          95
-        ],
-        "onset": "2026-07",
-        "peak": "2026-09",
-        "recentSharePct": 2.4,
-        "examples": [
-          {
-            "id": "arxiv-2609.01234",
-            "title": "SkillBench",
-            "url": "https://arxiv.org/abs/2609.01234"
-          }
-        ]
-      }
-    ]
-  }
+  "hotspots": [
+    {
+      "stream": "agent",
+      "name": "智能体",
+      "source": "arXiv 上智能体方向的论文（检索词 abs:agent，分类 cs*，不限是否中稿）",
+      "months": [
+        "2026-07",
+        "2026-08",
+        "2026-09"
+      ],
+      "totals": [
+        2600,
+        2800,
+        3000
+      ],
+      "items": [
+        {
+          "name": "Agent Skills",
+          "summary": "把可复用的能力打包成技能，按需加载给智能体。",
+          "terms": [
+            "agent skills",
+            "skill library"
+          ],
+          "counts": [
+            40,
+            66,
+            95
+          ],
+          "onset": "2026-07",
+          "peak": "2026-09",
+          "recentSharePct": 2.4,
+          "examples": [
+            {
+              "id": "arxiv-2609.01234",
+              "title": "SkillBench",
+              "url": "https://arxiv.org/abs/2609.01234"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

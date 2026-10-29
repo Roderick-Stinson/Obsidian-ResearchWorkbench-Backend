@@ -89,5 +89,15 @@
     },
     "summary": "上周的研究脉络集中在 Harness 与工作流自进化、演化增益的归因，以及多智能体通信和协作的脆弱性。部分分析提醒，报告的增益可能受到基准过拟合、测试时算力或采样的影响。",
     "reportId": "weekly-2026-10-19"
-  }
+  },
+  "accepted": [
+    {
+      "paper": {
+        "id": "openreview-imcyVlzpXh",
+        "title": "Multi-agent Architecture Search via Agentic Supernet"
+      },
+      "venue": "ICML 2025",
+      "kind": "upgraded"
+    }
+  ]
 }

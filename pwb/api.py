@@ -12,11 +12,11 @@ from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import __version__, contract, errors, interests, jobs, llm, pdfmeta, pdfs
+from . import __version__, contract, daily, errors, interests, jobs, llm, migrate, pdfmeta, pdfs
 from .errors import invalid, not_found
 from .store import Store
 from .tasks import HANDLERS, Worker
-from .util import arxiv_id_from_url, new_id, now
+from .util import TZ_NAME, arxiv_id_from_url, new_id, now
 
 PREFIX = "/api/v1"
 LINE_ID_RE = re.compile(r"^line-[a-z0-9-]+$")
@@ -43,14 +43,18 @@ async def read_body(request, schema):
 
 def create_app(settings):
     store = Store(settings)
+    migrate.run(store)
     worker = Worker(store)
+    scheduler = daily.Scheduler(store, worker.wake)
 
     @asynccontextmanager
     async def lifespan(app):
         if settings.start_worker:
             worker.start()
+            scheduler.start()
         yield
         if settings.start_worker:
+            scheduler.stop()
             worker.stop()
 
     app = FastAPI(title="论文工作台后端", version=__version__, lifespan=lifespan)
@@ -78,7 +82,8 @@ def create_app(settings):
         return body
 
     def require_paper(paper_id):
-        pid = store.resolve(paper_id)
+        # 每日推荐里的论文还不在论文表里：你打开、标记它时才写进去（不显示在论文库，除非标了相关等）。
+        pid = store.resolve(paper_id) or daily.materialize(store, paper_id)
         if not pid:
             raise not_found("论文不存在：" + paper_id)
         return pid
@@ -88,7 +93,8 @@ def create_app(settings):
     @r.get("/health")
     def health():
         # taskTypes：后端目前能执行的任务；面板据此把还没实现的按钮显示成“即将上线”。
-        return out("health", {"status": "ok", "version": __version__, "time": now(), "taskTypes": sorted(HANDLERS)})
+        return out("health", {"status": "ok", "version": __version__, "time": now(), "taskTypes": sorted(HANDLERS),
+                              **({"timezone": TZ_NAME} if TZ_NAME else {})})
 
     @r.get("/overview")
     def overview():
@@ -242,10 +248,7 @@ def create_app(settings):
 
     @r.get("/papers/{paper_id}")
     def paper(paper_id: str):
-        body = store.get_paper(paper_id)
-        if body is None:
-            raise not_found("论文不存在：" + paper_id)
-        return out("paper", body)
+        return out("paper", store.get_paper(require_paper(paper_id)))
 
     @r.get("/papers/{paper_id}/pdf")
     def paper_pdf(paper_id: str):
@@ -268,7 +271,7 @@ def create_app(settings):
     @r.patch("/me/papers/{paper_id}")
     async def patch_paper_user(paper_id: str, request: Request):
         body = await read_body(request, "paper-user-patch")
-        user = store.patch_user(paper_id, body)
+        user = store.patch_user(require_paper(paper_id), body)
         if user is None:
             raise not_found("论文不存在：" + paper_id)
         return out("paper-user", user)
@@ -280,7 +283,7 @@ def create_app(settings):
     @r.put("/me/queue")
     async def put_queue(request: Request):
         body = await read_body(request, "queue-put")
-        resolved = [store.resolve(i) for i in body["paperIds"]]
+        resolved = [store.resolve(i) or daily.materialize(store, i) for i in body["paperIds"]]
         missing = [i for i, p in zip(body["paperIds"], resolved) if not p]
         if missing:
             raise invalid("论文不存在：" + "、".join(missing))
@@ -360,6 +363,19 @@ def create_app(settings):
         return out("llm-settings", {"engine": config["engine"], "updatedAt": config["updatedAt"], "engines": [
             {"key": k, "name": v["name"], "ready": ready[k][0], "detail": ready[k][1],
              "model": config["models"].get(k), "defaultModel": v["defaultModel"]} for k, v in llm.ENGINES.items()]})
+
+    @r.get("/settings/recommend")
+    def get_recommend_settings():
+        return out("recommend-settings", daily.settings_body(store))
+
+    @r.put("/settings/recommend")
+    async def put_recommend_settings(request: Request):
+        body = await read_body(request, "recommend-settings-put")
+        try:
+            daily.put_settings(store, body)
+        except ValueError as e:
+            raise invalid(str(e))
+        return out("recommend-settings", daily.settings_body(store))
 
     @r.get("/settings/llm")
     def get_llm_settings():

@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from pwb import llm, survey
+from pwb import llm, profile, survey
 
 from .conftest import API, assert_contract
 
@@ -30,7 +30,7 @@ PAGES = [
 
 
 PROFILE = {"queries": [{"topic": "mas", "query": "q1"}], "direction": ["我的研究方向：多智能体系统。"],
-           "extraTopics": ["LLM 可解释性", "图模型可解释性"]}
+           "extraTopics": ["LLM 可解释性", "图模型可解释性"], "streams": [], "venues": None, "venuesExtra": {}}
 
 
 def fake_s2(monkeypatch, pages):
@@ -40,7 +40,7 @@ def fake_s2(monkeypatch, pages):
         calls.append(params)
         return pages[len(calls) - 1] if len(calls) <= len(pages) else {"data": []}
     monkeypatch.setattr(survey, "_s2_get", get)
-    monkeypatch.setattr(survey, "load_profile", lambda store, required=False: PROFILE)
+    monkeypatch.setattr(profile, "load", lambda store, required=False: PROFILE)
     monkeypatch.setattr(survey.time, "sleep", lambda s: None)
     return calls
 
@@ -174,9 +174,24 @@ def test_user_edits_survive_reingest(client, store, monkeypatch):
 
 
 def test_profile_required_for_fetch(store):
-    with pytest.raises(FileNotFoundError, match="survey.example.json"):
+    with pytest.raises(FileNotFoundError, match="profile.example.json"):
         survey.fetch(store, "2023-2026", lambda m: None)
     assert survey._topics(store)[1] == [], "没配置时筛选和整理照常进行，只是没有额外方向"
-    example = json.loads(survey.PROFILE_EXAMPLE.read_text(encoding="utf-8"))
-    survey.profile_path(store).write_text(json.dumps(example, ensure_ascii=False), encoding="utf-8")
-    assert survey.load_profile(store, required=True)["queries"] and example["direction"][0] in survey._direction_text(store)
+    example = json.loads(profile.EXAMPLE.read_text(encoding="utf-8"))
+    profile.path(store).write_text(json.dumps(example, ensure_ascii=False), encoding="utf-8")
+    assert profile.load(store, required=True)["queries"] and example["direction"][0] in survey._direction_text(store)
+    assert [s["key"] for s in profile.streams(store)] == ["rag"]
+
+
+def test_profile_legacy_file_and_venues(store):
+    legacy = store.settings.data_dir / "survey.json"
+    legacy.write_text(json.dumps({"queries": [{"topic": "a", "query": "q"}], "arxiv": {"query": "abs:agent", "field": "智能体"}}), encoding="utf-8")
+    assert profile.streams(store) == [{"key": "main", "name": "智能体", "query": "abs:agent", "categories": ["cs."]}], "旧文件、旧的 arxiv 字段照样能读"
+    assert len(survey.venues(store)) == len(survey.VENUES)
+    profile.path(store).write_text(json.dumps({"venues": ["ICML", "ICLR"], "venuesExtra": {"COLM": {"names": ["Conference on Language Modeling"]}}}), encoding="utf-8")
+    vm = survey.venues(store)
+    assert list(vm) == ["ICML", "ICLR", "COLM"] and vm["COLM"]["kind"] == "proceedings", "profile.json 优先于旧文件"
+    assert survey._venue_short({"venue": "Conference on Language Modeling"}, vm) == "COLM"
+    profile.path(store).write_text(json.dumps({"venues": ["NotAVenue"]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="venuesExtra"):
+        survey.venues(store)

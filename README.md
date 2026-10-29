@@ -1,10 +1,12 @@
 # 论文工作台 · 后端
 
-> A local research-paper workbench backend (FastAPI + SQLite) for an Obsidian dashboard: builds a paper library for your research directions, keeps a keyword tree of your interests, and summarises classics, must-reads and field-wide hotspot trends with an LLM (local Claude Code / Codex CLI / DeepSeek). Docs are in Chinese.
+> A local research-paper workbench backend (FastAPI + SQLite) for an Obsidian dashboard: daily recommendations from arXiv and Hugging Face Daily Papers (screened against your interest keyword tree, skimmed by an LLM), a paper library for your research directions, and summaries of classics, must-reads and field-wide hotspot trends. LLM: local Claude Code / Codex CLI / DeepSeek. Everything about your research directions lives in a config file, not in code. Docs are in Chinese.
 
 Obsidian 论文面板的后端服务。面板（前端）在另一个仓库：[Obsidian-ResearchWorkbench-Frontend](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)。接口按 `contract/数据格式约定.md` 实现；约定的源头在面板仓库的 `论文工作台/后端约定/`，这里的 `contract/` 是同步过来的副本。
 
-已经能用的：论文库（领域检索入库、DBLP 核实中稿、批量下载公开 PDF）、我的标记与阅读队列、我的研究领域（关键词树的填写与大模型整理）、经典与必读、领域发展史（含 arXiv 全领域热点演变）。每日推荐流水线（抓取、速读、三类推荐、简报）还在做；还没生成的数据接口返回 404，还没实现的后台任务会以“尚未实现”失败。
+已经能用的：每日推荐（arXiv + Hugging Face 每日论文 → 初筛 → 核心 / 邻近 / 热点三类 → 速读 → 精选和简报，每周新中稿入库）、论文库（领域检索入库、DBLP 核实中稿、批量下载公开 PDF）、我的标记与阅读队列、我的研究领域（关键词树的填写与大模型整理）、经典与必读、领域发展史（含按论文流分开的热点演变）。还没生成的数据接口返回 404，还没实现的后台任务（精读、周报等）会以“尚未实现”失败。
+
+**不写死**：和你研究方向有关的文字（检索词、方向说明、arXiv 论文流、会议清单）都在 `data/profile.json`；每日推荐怎么跑（时间、来源开关、阈值、上限、权重）在面板“设置 → 每日推荐”；时区用 `PWB_TZ`。
 
 ## 目录
 
@@ -17,21 +19,25 @@ pwb/            代码
   llm.py        可切换的大模型引擎（Claude Code / Codex CLI / DeepSeek API）
   rebuild.py    “重新整理关键词”任务：读论文原文 → 调用引擎 → 核对摘录 → 合并
   extraction.py 核对整理结果里的原文摘录并合并进关键词树
+  profile.py    读 data/profile.json（研究方向配置）
+  daily.py      每日推荐流水线、推荐设置、定时器
   survey.py     领域检索入库：Semantic Scholar 抓候选 → 大模型按标题、摘要筛选 → 写进论文库
   pdfmeta.py    从 PDF 第一页读标题
   dblp.py       用 DBLP 整库核实“待核实”论文是否中稿
   pdfs.py       批量下载论文库的 PDF（只用公开来源）
   landscape.py  经典与必读、领域发展史（参考文献统计 + 大模型整理）
-  feed.py       arXiv 论文流（按月，不限于论文库；检索词在 data/survey.json 里配置）
-  hotspots.py   全领域热点演变（词组占比统计 + 大模型归类）
+  feed.py       arXiv 论文流（按 profile.json 的 streams，每个流各取各的）
+  hotspots.py   热点演变（每个论文流的词组占比统计 + 大模型归类）
+  service.py    开机自启（macOS launchd / Linux systemd）
+  migrate.py    启动时把旧格式的数据改成新格式
   jobs.py       后台长任务（PDF 下载、DBLP 核实）的进度
   importer.py   从 vault 一次性导入论文条目和 PDF
   seed.py       写入约定里的示例数据
 contract/       约定副本：schemas、examples、validate.py
 tools/          生成 schemas 和 examples 的脚本（改约定时用）
 tests/          契约测试：每个接口的返回体都按 schema 校验
-data/           数据（不进版本库）：workbench.sqlite3、pdfs/、survey.json（你的检索方向）
-survey.example.json  检索方向配置的示例
+data/           数据（不进版本库）：workbench.sqlite3、pdfs/、profile.json（你的研究方向）、cache/（每日速读下的 PDF）
+profile.example.json  研究方向配置的示例
 ```
 
 迁移到服务器时，把整个文件夹拷过去即可（`data/` 里就是全部数据）。**不要把 `data/` 放进 Dropbox 等同步盘**，SQLite 数据库被同步工具改动容易损坏。
@@ -50,20 +56,21 @@ python3 -m venv .venv
 新用户装好以后，按下面的顺序配置。只有第 2 步要手写配置文件，其余在面板上点或者运行一条命令。
 
 1. **装后端**：见上面的“安装”。
-2. **写检索方向**（唯一必须手写的配置文件）：
+2. **写研究方向**（唯一必须手写的配置文件）：
    ```bash
-   mkdir -p data && cp survey.example.json data/survey.json
+   mkdir -p data && cp profile.example.json data/profile.json
    ```
-   然后按你的方向改 `data/survey.json`：
+   然后按你的方向改 `data/profile.json`（旧版本的 `data/survey.json` 也照样能读）：
 
    | 字段 | 用在哪里 | 写什么 |
    |---|---|---|
    | `queries` | 领域检索入库 | Semantic Scholar 检索词（`+` 与，`\|` 或，`""` 短语，`*` 前缀） |
    | `direction` | 筛选论文、整理经典与发展史 | 给大模型看的方向说明，写清楚什么算相关、什么不算 |
    | `extraTopics` | 筛选论文 | 关键词树以外、筛选时也可以归入的方向（可以为空） |
-   | `arxiv.query` | 热点演变 | arXiv 检索词，如 `abs:agent`（`abs:` 摘要、`ti:` 标题，可以用 `AND` / `OR`） |
-   | `arxiv.field` | 热点演变 | 领域的中文名，如“智能体”，显示在面板和给大模型的说明里 |
-   | `arxiv.categories` | 热点演变 | 保留的 arXiv 分类前缀，默认 `["cs."]`（计算机类） |
+   | `direction` | 也用在每日初筛 | 同上 |
+   | `streams` | 每日推荐、热点演变 | arXiv 论文流，可以有好几个，每个是 `{key, name, query, categories}`：`key` 是小写英文标识；`name` 是中文名（如“智能体”）；`query` 是 arXiv 检索词，如 `abs:agent`（`abs:` 摘要、`ti:` 标题，可以用 `AND` / `OR`）；`categories` 是保留的分类前缀，默认 `["cs."]`（计算机类） |
+   | `venues` | 领域检索、核实中稿 | 只用内置会议 / 期刊清单（CCF-A 等，见 `pwb/survey.py` 的 `VENUES`）里的哪些，写简称列表；`null` 或不写就全用 |
+   | `venuesExtra` | 同上 | 清单以外的会议 / 期刊：`{"简称": {"names": ["Semantic Scholar 里的全称"], "kind": "proceedings" 或 "journal"}}`（DBLP 核实只支持内置清单） |
 
 3. **准备大模型**：默认用本机 Claude Code，装好后运行一次 `claude` 登录即可，不需要配置文件。用 DeepSeek 的话，写 `data/secrets.json`：`{"deepseekApiKey": "sk-..."}`，再在面板“设置 → 大模型引擎”里切换。
 4. **启动后端**：`.venv/bin/python -m pwb serve`。
@@ -82,6 +89,10 @@ python3 -m venv .venv
     ```bash
     .venv/bin/python -m pwb feed          # 取 arXiv 论文流
     .venv/bin/python -m pwb landscape     # 经典与必读、领域发展史（含热点演变）
+    ```
+11. **每日推荐**：后端开着就会按“设置 → 每日推荐”里的时间（默认 01:00）自动运行；想马上看到，在面板“论文推荐”点“立刻刷新今天的推荐”。让后端开机自启：
+    ```bash
+    .venv/bin/python -m pwb service install
     ```
 
 之后在论文库里给论文标“相关” / “重点关注”，再“重新整理关键词”，关键词树会跟着你的标记变化。
@@ -116,6 +127,8 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 | `PWB_HOST` | `127.0.0.1` | 监听地址；改成非本机地址时必须设置 `PWB_TOKEN` |
 | `PWB_PORT` | `8765` | 端口 |
 | `PWB_TOKEN` | 空 | 设置后所有接口（`/health` 除外）都要带 `Authorization: Bearer <token>` |
+| `PWB_TZ` | 系统时区 | 时区（IANA 名字，如 `Asia/Shanghai`、`America/New_York`）：每日推荐的运行时间、“今天”是哪天都按它算，面板也跟着它显示时间 |
+| `S2_API_KEY` | 空 | Semantic Scholar 的 API key（免费申请），有了检索、取引用关系快很多 |
 | `PWB_CLAUDE_BIN` | 自动查找 | `claude` 命令的路径（PATH 和 `~/.local/bin` 里找不到时设置） |
 | `PWB_CODEX_BIN` | 自动查找 | `codex` 命令的路径 |
 | `DEEPSEEK_API_KEY` | 空 | DeepSeek API key；也可以写进 `data/secrets.json`：`{"deepseekApiKey": "sk-..."}` |
@@ -123,7 +136,7 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 
 ## 大模型引擎
 
-整理关键词等需要大模型的工作，用哪个引擎在面板“设置 → 大模型引擎”里切换（默认本机 Claude Code）。
+整理关键词、每日初筛和速读等需要大模型的工作，用哪个引擎在面板“设置 → 大模型引擎”里切换（默认本机 Claude Code）。
 
 - **Claude Code**：调用本机 `claude -p`，用你已登录的账号（不需要 API key）。在临时空目录里运行，不给任何工具，只读给它的材料、输出 JSON。
 - **Codex CLI**：调用本机 `codex exec`（只读沙箱）。
@@ -137,7 +150,7 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 
 在 CCF-A 会议 / 期刊（各领域）、ICLR、EMNLP / NAACL、Nature 及子刊里，按检索词找 2023–2026 年和你方向相关的论文，写进论文库。
 
-先写好你的检索方向：把 `survey.example.json` 复制成 `data/survey.json`，改里面的检索词（`queries`）、给大模型看的方向说明（`direction`，写清楚什么算相关、什么不算）和关键词树以外的方向（`extraTopics`）。
+先写好 `data/profile.json` 里的检索词（`queries`）、方向说明（`direction`）、关键词树以外的方向（`extraTopics`），要换会议范围就改 `venues` / `venuesExtra`（见“从零开始”）。
 
 ```bash
 .venv/bin/python -m pwb survey                         # 全流程：fetch → titles → abstracts → ingest
@@ -145,7 +158,7 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 .venv/bin/python -m pwb survey --stages reingest       # 已入库的重新写一遍（不调用大模型）
 ```
 
-- 会议清单在 `pwb/survey.py` 的 `VENUES` 里改，检索词在 `data/survey.json` 里改。
+- 内置的会议清单在 `pwb/survey.py` 的 `VENUES`；用哪些、加哪些在 `data/profile.json` 里配。
 - 每一步的结果存在 `survey_candidates` 表里，中断后重跑会接着做。
 - 会议能核实的（DBLP 有正式记录或有出版方 DOI）标“已发表”；只有 arXiv 版本、会议是 Semantic Scholar 推断的标“待核实”；ACL / EMNLP / NAACL 的 Findings 不入库。
 - Semantic Scholar 对匿名访问限流很严，抓取会自动等待重试；设置环境变量 `S2_API_KEY`（免费申请）会快很多。
@@ -160,13 +173,46 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 
 面板上也可以点“重新整理”（任务 `rebuild-classics` / `rebuild-map`）。必读按发表年份分三段，每段的核心论文逐篇判断、符合标准的都选，不限篇数（只按被引排，新作永远进不来）。
 
-全领域热点演变要先取 arXiv 论文流：按 `data/survey.json` 里 `arxiv.query` 的检索词，按月取标题和摘要（默认只保留计算机类）。第一次约 40 个请求、几分钟，之后只重取最近两个月；改了检索词会全部重取：
+热点演变要先取 arXiv 论文流：按 `data/profile.json` 里每个 `streams` 的检索词，按月取标题和摘要（默认只保留计算机类），每个流各算各的热点。第一次每个流约 40 个请求、几分钟，之后只重取最近两个月；改了某个流的检索词，这个流会全部重取：
 
 ```bash
 .venv/bin/python -m pwb feed                      # 默认从 2023-07 起
 ```
 
 然后整理领域发展史时，会统计哪些词组的占比涨得最多、由大模型归成热点，按起势时间排出先后。经典 = 被论文库很多篇引用的工作（按方向分别取候选，避免论文多的方向把别的方向挤掉）；趋势、分类、评测集计数直接按数据算；发展阶段、里程碑、研究空白由大模型写，只能引用真实论文。
+
+## 每日推荐
+
+后端开着就会按面板“设置 → 每日推荐”里的时间（默认每天 01:00，按 `PWB_TZ`）自动跑一次；错过了（电脑睡眠、后端没开）会在下次开着时补跑，补抓的天数有上限。也可以手动跑：
+
+```bash
+.venv/bin/python -m pwb daily                  # 跑一次（和面板“立刻刷新今天的推荐”一样）
+.venv/bin/python -m pwb daily --step skim      # 只跑某一步：fetch / version-check / classify / recommend / skim / pick / new-accepted / map / classics
+```
+
+流程（每篇候选论文做到哪一步记在 `daily_candidates` 表里，中断后重跑会接着做）：
+
+1. **抓取**：`profile.json` 里每个论文流，取上次运行以来新提交的 arXiv 论文；Hugging Face 每日论文全部取来，带点赞数和 GitHub 链接。
+2. **核实中稿**：论文库里的预印本，Semantic Scholar 有了正式出版记录（在你的会议范围里）就改为已发表、换正式 ID，在简报里提一句。
+3. **初筛**：大模型分批看标题和摘要，依据方向说明、关键词树、你标过“不相关”的论文（反例）。相关且命中关键词的是**核心**。
+4. **邻近 / 热点**：引用了种子论文（本人、关注、相关、论文库核心论文，可配）的是**邻近**；Hugging Face 点赞够多、或命中正在热的热点且有一些点赞的是**热点**（每天有上限）。都不看关键词。
+5. **速读**：选了的类别读全文（arXiv PDF，每天有上限），其余只看摘要；中文结论式标题、速读、质量分。
+6. **精选和简报**：按相关程度、质量分、点赞、有没有代码加权打分，取前几篇。
+7. **每周**（设置里的那天）：按领域检索的检索词和会议清单查新中稿，筛选通过的直接入库；更新领域发展史与热点。
+
+推荐出来的论文不进论文库，你标了“相关”才进（设置里可以让某几类直接进）。全文速读用本机 Claude Code 时每篇约 1 分钟，几十篇要半小时以上，所以放在凌晨。
+
+### 开机自启
+
+定时在后端里，后端得一直开着：
+
+```bash
+.venv/bin/python -m pwb service install     # macOS：launchd（登录后启动、退出自动拉起）；Linux：systemd 用户服务
+.venv/bin/python -m pwb service status
+.venv/bin/python -m pwb service uninstall
+```
+
+日志在 `data/serve.log`。安装时会把当前终端里的 `PWB_*`、`S2_API_KEY`、`DEEPSEEK_*` 环境变量写进服务配置，改了要重新安装。
 
 ## 批量下载 PDF
 
@@ -212,10 +258,9 @@ nohup tools/dblp_update.sh > data/dblp/update.log 2>&1 &
 
 ## 还没做的
 
-- 流水线：抓取、版本检查（中稿换 ID，存储层已有 `Store.rename_paper`；定期用新的 DBLP 月度存档跑 dblp-index / dblp-verify）、相关性判定、速读、三类推荐、精读、结果表、发展史、经典、候选关键词、研究线、热点、报告、Telegram 推送。
-- 任务：`deep-read`、`generate-report`、`retry-step`、`ingest-paper` 还没实现（面板上显示“即将上线”）。
+- 流水线里还没做的：精读、结果表、候选关键词、研究线、社区热点、报告、推送（Telegram 等）。DBLP 核实还要定期手动用新的月度存档跑 dblp-index / dblp-verify。
+- 任务：`deep-read`、`generate-report`、`ingest-paper` 还没实现（面板上显示“即将上线”）。
 - GPU 服务器上的实验守护进程（向 `inbox` 上报运行记录）。
-- 开机自启、每日定时运行（launchd）。
 
 ## 许可证
 

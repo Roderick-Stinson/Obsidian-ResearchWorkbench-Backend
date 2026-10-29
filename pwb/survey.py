@@ -15,8 +15,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from . import interests, llm
-from .config import ROOT
+from . import interests, llm, profile
 from .util import dumps, now
 
 S2_BULK = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
@@ -92,23 +91,19 @@ VENUES = {
     "Nat. Comput. Sci.": _v(J, "Nature Computational Science"),
 }
 
-# 检索方向（检索词、方向说明、关键词树以外的方向）因人而异，放在数据目录的 survey.json（不进版本库），
-# 格式见仓库根目录的 survey.example.json。
-PROFILE_EXAMPLE = ROOT / "survey.example.json"
 
 
-def profile_path(store):
-    return store.settings.data_dir / "survey.json"
-
-
-def load_profile(store, required=False):
-    """{queries: [{topic, query}], direction: [行], extraTopics: [方向]}；没配置时 required 则报错，否则返回空的。"""
-    path = profile_path(store)
-    if not path.exists():
-        if required:
-            raise FileNotFoundError("还没有检索方向配置：把 {} 复制成 {}，再按你的方向改".format(PROFILE_EXAMPLE, path))
-        return {"queries": [], "direction": [], "extraTopics": []}
-    return json.loads(path.read_text(encoding="utf-8"))
+def venues(store):
+    """领域检索的会议 / 期刊：profile.json 的 venues 选内置清单里的哪些（不写就全用），venuesExtra 加清单以外的。"""
+    prof = profile.load(store)
+    chosen = prof["venues"]
+    unknown = [v for v in chosen or [] if v not in VENUES]
+    if unknown:
+        raise ValueError("profile.json 的 venues 里有内置清单以外的名字：{}（清单以外的写进 venuesExtra）".format("、".join(unknown)))
+    out = {k: v for k, v in VENUES.items() if chosen is None or k in chosen}
+    for short, v in prof["venuesExtra"].items():
+        out[short] = {"names": [short, *[n for n in v.get("names", []) if n != short]], "kind": v.get("kind") or C}
+    return out
 
 
 SCHEMA_CREATE = """
@@ -168,13 +163,13 @@ def _s2_get(params, log, tries=25):
     raise RuntimeError("Semantic Scholar 一直限流或出错：" + url[:120])
 
 
-def _venue_short(paper):
+def _venue_short(paper, venue_map=None):
     """Semantic Scholar 返回的 venue / publicationVenue → 我们的简称；认不出来返回 None（不入库）。"""
     names = {paper.get("venue") or ""}
     pv = paper.get("publicationVenue") or {}
     names |= {pv.get("name") or ""} | set(pv.get("alternate_names") or [])
     lowered = {n.lower() for n in names if n}
-    for short, v in VENUES.items():
+    for short, v in (venue_map or VENUES).items():
         if lowered & ({short.lower()} | {n.lower() for n in v["names"]}):
             return short
     return None
@@ -182,10 +177,13 @@ def _venue_short(paper):
 
 def fetch(store, years, log, venues=None):
     """按每条检索词抓候选。已有的候选只合并检索出处，不改阶段。"""
-    venues = venues or list(VENUES)
-    names = [n for v in venues for n in VENUES[v]["names"]]
+    vmap = globals()["venues"](store)
+    names = [n for v in (venues or list(vmap)) for n in vmap[v]["names"]]
     added = 0
-    for q in load_profile(store, required=True)["queries"]:
+    queries = profile.load(store, required=True)["queries"]
+    if not queries:
+        raise ValueError("profile.json 里还没有 queries（领域检索的检索词）")
+    for q in queries:
         topic, query = q["topic"], q["query"]
         token, pages = None, 0
         while True:
@@ -198,7 +196,7 @@ def fetch(store, years, log, venues=None):
                 for p in res.get("data") or []:
                     if not p.get("paperId") or not p.get("title"):
                         continue
-                    short = _venue_short(p)
+                    short = _venue_short(p, vmap)
                     if short is None:
                         continue
                     row = c.execute("SELECT data FROM survey_candidates WHERE s2_id = ?", (p["paperId"],)).fetchone()
@@ -223,12 +221,12 @@ def fetch(store, years, log, venues=None):
 def _topics(store):
     tree = store.get_kv("interests") or {}
     mas = [n["label"] for n, level, _ in interests.walk(tree.get("domains", [])) if level <= 2]
-    return mas, load_profile(store).get("extraTopics", [])
+    return mas, profile.load(store)["extraTopics"]
 
 
 def _direction_text(store):
     mas, _ = _topics(store)
-    lines = list(load_profile(store).get("direction", []))
+    lines = list(profile.load(store)["direction"])
     if mas:
         lines.append("我的关键词树里的方向：" + "；".join(mas))
     return "\n".join(lines)
@@ -363,6 +361,7 @@ def _ids(d):
 
 
 def ingest(store, log):
+    vmap = venues(store)
     mas_nodes = {n["label"]: n["id"] for n, level, _ in interests.walk((store.get_kv("interests") or {}).get("domains", []))}
     with store.conn() as c:
         rows = c.execute("SELECT s2_id, data, decision FROM survey_candidates WHERE stage = 'relevant'").fetchall()
@@ -374,7 +373,7 @@ def ingest(store, log):
         d, dec = json.loads(r["data"]), json.loads(r["decision"])
         primary, aliases = _ids(d)
         existing = next((store.resolve(x) for x in [primary, *aliases] if store.resolve(x)), None) or titles.get(_norm_title(d["title"]))
-        kind = VENUES[d["venueShort"]]["kind"]
+        kind = vmap.get(d["venueShort"], {}).get("kind", C)
         year = venue_year(d)
         venue = "{} {}".format(d["venueShort"], year or "").strip()
         authors = [a["name"] for a in d.get("authors") or [] if a.get("name")]
