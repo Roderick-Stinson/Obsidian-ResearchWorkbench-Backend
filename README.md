@@ -2,7 +2,7 @@
 
 > A local research-paper workbench backend (FastAPI + SQLite) for an Obsidian dashboard: builds a paper library for your research directions, keeps a keyword tree of your interests, and summarises classics, must-reads and field-wide hotspot trends with an LLM (local Claude Code / Codex CLI / DeepSeek). Docs are in Chinese.
 
-Obsidian 论文面板的后端服务。面板（前端）在另一个仓库：[paper-workbench-obsidian](https://github.com/Roderick-Stinson/paper-workbench-obsidian)。接口按 `contract/数据格式约定.md` 实现；约定的源头在面板仓库的 `论文工作台/后端约定/`，这里的 `contract/` 是同步过来的副本。
+Obsidian 论文面板的后端服务。面板（前端）在另一个仓库：[Obsidian-ResearchWorkbench-Frontend](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)。接口按 `contract/数据格式约定.md` 实现；约定的源头在面板仓库的 `论文工作台/后端约定/`，这里的 `contract/` 是同步过来的副本。
 
 已经能用的：论文库（领域检索入库、DBLP 核实中稿、批量下载公开 PDF）、我的标记与阅读队列、我的研究领域（关键词树的填写与大模型整理）、经典与必读、领域发展史（含 arXiv 全领域热点演变）。每日推荐流水线（抓取、速读、三类推荐、简报）还在做；还没生成的数据接口返回 404，还没实现的后台任务会以“尚未实现”失败。
 
@@ -39,7 +39,7 @@ survey.example.json  检索方向配置的示例
 ## 安装
 
 ```bash
-git clone https://github.com/Roderick-Stinson/paper-workbench.git ~/PaperWorkbench
+git clone https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Backend.git ~/PaperWorkbench
 cd ~/PaperWorkbench
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
