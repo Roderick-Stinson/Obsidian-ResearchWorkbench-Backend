@@ -12,7 +12,7 @@ from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import __version__, contract, daily, errors, interests, jobs, llm, migrate, pdfmeta, pdfs
+from . import __version__, contract, daily, errors, interests, jobs, llm, migrate, notes, pdfmeta, pdfs
 from .errors import invalid, not_found
 from .store import Store
 from .tasks import HANDLERS, Worker
@@ -170,18 +170,12 @@ def create_app(settings):
         if settings.start_worker:
             threading.Thread(target=run, name="pwb-complete-" + pid, daemon=True).start()
 
-    @r.post("/papers")
-    async def create_paper(request: Request):
-        """手动添加论文（本人论文、关注论文）。已在论文库里的不重复建，只更新标记。
-        给了 arXiv / OpenReview 链接的，后台会补上标题、作者等信息并下载 PDF；标题可以不填。"""
-        body = await read_body(request, "paper-create")
-        url = body.get("url")
-        title = (body.get("title") or "").strip()
-        if not title and not url:
-            raise invalid("标题和链接至少填一个")
+    def add_paper(url, title="", flags=None, origin=None):
+        """按链接 / 标题收录一篇论文；已在论文库里的不重复建，只更新标记。返回 (论文 ID, 是否新建)。
+        给了 arXiv / OpenReview 链接的，后台会补上标题、作者等信息并下载 PDF。"""
         m = OPENREVIEW_RE.search(url or "")
         pid = ("openreview-" + m.group(1) if m else arxiv_id_from_url(url)) or "local-" + secrets.token_hex(4)
-        flags = {k: body[k] for k in ("own", "watched") if body.get(k)}
+        flags = flags or {}
         existing = store.resolve(pid)
         if existing:
             paper = store.get_paper(existing)
@@ -192,19 +186,31 @@ def create_app(settings):
                 store.patch_user(existing, flags)
             if not paper["hasPdf"]:
                 complete_later(existing)
-            return out("paper", store.get_paper(existing))
+            return existing, False
         kind = pid.split("-", 1)[0]
         store.upsert_paper({
             "id": pid, "title": title or pid, "titleZh": None, "authors": [], "firstAuthor": "", "year": None,
-            "venue": "", "publicationStatus": "投稿中" if body.get("own") else "待核实",
+            "venue": "", "publicationStatus": "投稿中" if flags.get("own") else "待核实",
             "versions": [{"id": pid, "kind": kind, "label": pid, "url": url, "date": None}] if kind in ("openreview", "arxiv") else [],
             "urls": {"source": url, "pdf": None, "code": None}, "pdfSha256": None,
-            "citations": {"count": None, "updatedAt": None}, "metadataStatus": "待核实", "summary": "", "matchedKeywords": []})
+            "citations": {"count": None, "updatedAt": None}, "metadataStatus": "待核实", "summary": "", "matchedKeywords": [],
+            **({"origin": origin} if origin else {})})
         if flags:
             store.patch_user(pid, flags)
         if kind in ("openreview", "arxiv"):
             complete_later(pid)
-        return out("paper", store.get_paper(pid), status=201)
+        return pid, True
+
+    @r.post("/papers")
+    async def create_paper(request: Request):
+        """手动添加论文（本人论文、关注论文）。标题和链接至少填一个；给了 arXiv / OpenReview 链接的标题可以不填。"""
+        body = await read_body(request, "paper-create")
+        url = body.get("url")
+        title = (body.get("title") or "").strip()
+        if not title and not url:
+            raise invalid("标题和链接至少填一个")
+        pid, created = add_paper(url, title, {k: body[k] for k in ("own", "watched") if body.get(k)})
+        return out("paper", store.get_paper(pid), status=201 if created else 200)
 
     @r.patch("/papers/{paper_id}")
     async def patch_paper(paper_id: str, request: Request):
@@ -315,6 +321,23 @@ def create_app(settings):
         else:
             notes.pop(line_id, None)
         return out("idea-notes", store.set_kv("idea-notes", {"notes": notes, "updatedAt": now()}))
+
+    # ---------- 阅读笔记 ----------
+
+    def ensure_from_url(url, origin=None):
+        """笔记里写的 arXiv / OpenReview 链接：按链接收录（要追的论文 origin=note-follow，不算进论文库）。"""
+        if not (OPENREVIEW_RE.search(url) or arxiv_id_from_url(url)):
+            return None
+        return add_paper(url, origin=origin)[0]
+
+    @r.get("/me/notes")
+    def get_notes():
+        return out("notes", notes.body(store, daily.get_settings(store)["notes"]))
+
+    @r.put("/me/notes")
+    async def put_notes(request: Request):
+        body = await read_body(request, "notes-put")
+        return out("notes", notes.sync(store, body["notes"], ensure_from_url, daily.get_settings(store)["notes"]))
 
     # ---------- 研究兴趣 ----------
 

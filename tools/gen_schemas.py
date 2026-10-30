@@ -31,7 +31,7 @@ LINE_ID = {"type": "string", "pattern": r"^line-[a-z0-9-]+$"}
 LLM_ENGINES = ["claude-code", "codex", "deepseek"]
 BASIS = obj({"ownPapers": INT, "watchedPapers": INT, "relevantPapers": INT})
 CLAIM_TARGET = obj({"kind": enum("paper", "reproGroup", "experimentNote"), "id": TEXT})
-STEP_KEYS = ["fetch", "version-check", "classify", "skim", "recommend", "pick", "new-accepted", "deep-read", "results", "map",
+STEP_KEYS = ["fetch", "version-check", "notes", "classify", "skim", "recommend", "pick", "new-accepted", "deep-read", "results", "map",
              "must-read", "classics", "interests", "research-lines", "hotspots", "report", "push"]
 
 PAPER_USER = obj({"paperId": PID, "rating": {"type": "integer", "minimum": 0, "maximum": 5}, "flags": FLAGS,
@@ -135,6 +135,8 @@ REC_SETTINGS = {
     "pick": {"max": rng(0, 30), "weights": closed({k: WEIGHT for k in ("relevance", "quality", "hf", "code")})},
     "weekly": {"newAccepted": BOOL, "map": BOOL, "classics": BOOL},
     "library": {"autoAdd": arr(CATS, uniqueItems=True)},
+    "notes": {"sections": closed({k: TEXT for k in ("relation", "ideas", "follow")}), "screening": BOOL, "asSeeds": BOOL,
+              "seedStatuses": arr(TEXT, uniqueItems=True), "seedMinRating": rng(0, 5), "followToQueue": BOOL, "candidates": BOOL},
 }
 
 # kind -> (title, body, generated)
@@ -207,7 +209,14 @@ responses = {
         "domains": arr(kw_node(1)),
         "candidates": arr(obj({"id": TEXT, "parentId": TEXT, "level": enum(2, 3), "label": TEXT, "reason": TEXT,
                                "growth": obj({"paperCount": INT, "windowDays": INT, "changePct": NUM}),
-                               "examples": PREFS}))}), True),
+                               "examples": PREFS, "source": enum("trend", "notes")}, optional=("source",)))}), True),
+    "notes": ("阅读笔记", obj({
+        "items": arr(obj({"paperId": PID, "path": TEXT, "title": TEXT, "status": nullable(STR), "rating": nullable(rng(0, 5)),
+                          "mtime": INT, "sections": arr(TEXT), "seed": BOOL})),
+        "skipped": arr(obj({"path": TEXT, "mtime": INT, "reason": TEXT})), "updatedAt": nullable(DT),
+        "profile": nullable(obj({"generatedAt": DT, "summary": STR, "points": arr(obj({
+            "id": TEXT, "kind": enum("interest", "doubt"), "text": TEXT, "papers": PREFS}))})),
+        "sync": obj({"ids": {"type": "object", "additionalProperties": PID}, "queued": PREFS})}, optional=("sync",)), False),
     "classics": ("经典与必读", obj({
         "rules": obj({"libraryCitationMin": INT, "libraryPapers": INT, "mustReadCount": INT}), "factsUpdatedAt": DT,
         "startHere": arr(obj({"paper": PREF, "date": MONTH, "venue": STR, "why": TEXT})),
@@ -310,6 +319,10 @@ bodies = {
     "interests-extraction": ("一次关键词整理结果", obj({"overview": TEXT, "basis": BASIS,
                                                     "domains": arr(extraction_node(1), minItems=1)})),
     "llm-settings-put": ("切换大模型引擎", closed({"engine": enum(*LLM_ENGINES), "model": nullable(STR)}, optional=("model",))),
+    "notes-put": ("同步阅读笔记（整体替换）", closed({"notes": arr(closed({
+        "paperId": TEXT, "path": TEXT, "title": TEXT, "status": nullable(STR), "rating": nullable(rng(0, 5)), "mtime": INT,
+        "sections": arr(closed({"heading": TEXT, "level": rng(1, 6), "text": STR}, optional=()), maxItems=200)},
+        optional=("status", "rating")), maxItems=5000)}, optional=())),
     "recommend-settings-put": ("修改每日推荐设置", closed({k: closed(v) for k, v in REC_SETTINGS.items()}, minProperties=1)),
     "task-create": ("创建后台任务", typed_params(closed({"type": enum(*TASK_TYPES), "params": {"type": "object"}}, optional=()))),
 }

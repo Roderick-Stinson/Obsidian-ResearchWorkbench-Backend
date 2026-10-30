@@ -1,0 +1,24 @@
+{
+  "notes": [
+    {
+      "paperId": "arxiv-2502.04180",
+      "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
+      "title": "MaAS 用超网搜索多智能体架构",
+      "status": "精读",
+      "rating": 5,
+      "mtime": 1761700000000,
+      "sections": [
+        {
+          "heading": "和我的研究的关系",
+          "level": 2,
+          "text": "它的超网只按任务采样，我想按查询采样。"
+        },
+        {
+          "heading": "要追的论文",
+          "level": 2,
+          "text": "- https://arxiv.org/abs/2410.10762"
+        }
+      ]
+    }
+  ]
+}

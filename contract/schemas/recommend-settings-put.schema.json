@@ -205,6 +205,53 @@
       },
       "required": [],
       "additionalProperties": false
+    },
+    "notes": {
+      "type": "object",
+      "properties": {
+        "sections": {
+          "type": "object",
+          "properties": {
+            "relation": {
+              "$ref": "common.schema.json#/$defs/Text"
+            },
+            "ideas": {
+              "$ref": "common.schema.json#/$defs/Text"
+            },
+            "follow": {
+              "$ref": "common.schema.json#/$defs/Text"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "screening": {
+          "type": "boolean"
+        },
+        "asSeeds": {
+          "type": "boolean"
+        },
+        "seedStatuses": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "uniqueItems": true
+        },
+        "seedMinRating": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "followToQueue": {
+          "type": "boolean"
+        },
+        "candidates": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     }
   },
   "required": [],

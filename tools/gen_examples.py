@@ -148,7 +148,21 @@ write(R + "interests.json", {**resp("interests"), "overview": "（示例）研�
     "candidates": [{"id": "cand-harness", "parentId": "kw-mas", "level": 2, "label": "Agent Harness 设计与评测",
                     "reason": "近 30 天该方向论文数增长明显，你的关键词树里还没有",
                     "growth": {"paperCount": 23, "windowDays": 30, "changePct": 120},
-                    "examples": [ref("arxiv-2610.32131", "轻量级代码智能体 Harness 与模型搭配研究")]}]})
+                    "examples": [ref("arxiv-2610.32131", "轻量级代码智能体 Harness 与模型搭配研究")], "source": "trend"},
+                   {"id": "cand-skill-reuse", "parentId": "kw-mas", "level": 2, "label": "技能复用与组合",
+                    "reason": "你在两篇笔记里都想追技能能否跨任务复用",
+                    "growth": {"paperCount": 2, "windowDays": 0, "changePct": 0},
+                    "examples": [ref("arxiv-2502.04180", "Multi-agent Architecture Search via Agentic Supernet")], "source": "notes"}]})
+write(R + "notes.json", {**resp("notes", False), "updatedAt": GEN,
+    "items": [{"paperId": "arxiv-2502.04180", "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
+               "title": "MaAS 用超网搜索多智能体架构", "status": "精读", "rating": 5, "mtime": 1761700000000,
+               "sections": ["逻辑链", "1. 研究动机", "我的评价", "和我的研究的关系", "想法与疑问", "要追的论文"], "seed": True}],
+    "skipped": [{"path": "论文阅读/论文笔记整理/还没填 ID 的笔记.md", "mtime": 1761600000000, "reason": "paper_id 对不上论文：（空）"}],
+    "profile": {"generatedAt": GEN, "summary": "（示例）你最关心按查询自适应地生成多智能体架构，并怀疑自演化带来的增益只是选择噪声。",
+                "points": [{"id": "pt-0", "kind": "interest", "text": "按查询难度自适应选择架构，而不是一个架构打天下",
+                            "papers": [ref("arxiv-2502.04180", "Multi-agent Architecture Search via Agentic Supernet")]},
+                           {"id": "pt-1", "kind": "doubt", "text": "只在单一基准上报告的自演化增益",
+                            "papers": [ref("arxiv-2502.04180", "Multi-agent Architecture Search via Agentic Supernet")]}]}})
 ev = lambda b, c, s, code=None: {"libraryCitations": b, "citations": c, "baselineCount": None, "githubStars": s, "codeUrl": code}
 write(R + "classics.json", {**resp("classics"), "rules": {"libraryCitationMin": 8, "libraryPapers": 989, "mustReadCount": 30},
     "factsUpdatedAt": "2026-10-25T21:44:00+08:00",
@@ -254,6 +268,10 @@ write(B + "interests-extraction.json", {"overview": "（示例）关注多智能
         {"label": "多智能体架构搜索", "summary": "示例二级关键词", "evidence": [ev_maas], "children": [
             {"label": "查询自适应的超网采样", "summary": "示例三级关键词", "evidence": [ev_maas]}]}]}]})
 write(B + "llm-settings-put.json", {"engine": "deepseek", "model": "deepseek-reasoner"})
+write(B + "notes-put.json", {"notes": [{"paperId": "arxiv-2502.04180", "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
+    "title": "MaAS 用超网搜索多智能体架构", "status": "精读", "rating": 5, "mtime": 1761700000000,
+    "sections": [{"heading": "和我的研究的关系", "level": 2, "text": "它的超网只按任务采样，我想按查询采样。"},
+                 {"heading": "要追的论文", "level": 2, "text": "- https://arxiv.org/abs/2410.10762"}]}]})
 write(B + "recommend-settings-put.json", {"schedule": {"time": "01:00"}, "skim": {"fullText": ["core", "adjacent", "trending"]}})
 write(B + "task-create.json", {"type": "deep-read", "params": {"paperId": "arxiv-2610.17613"}})
 write(B + "task-create.周报.json", {"type": "generate-report", "params": {"type": "weekly", "period": {"start": "2026-10-19", "end": "2026-10-25"}}})

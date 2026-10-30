@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/notes.schema.json",
+  "title": "阅读笔记",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "notes"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "paperId": {
+                "$ref": "common.schema.json#/$defs/PaperId"
+              },
+              "path": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "title": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rating": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "mtime": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sections": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
+              },
+              "seed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "paperId",
+              "path",
+              "title",
+              "status",
+              "rating",
+              "mtime",
+              "sections",
+              "seed"
+            ]
+          }
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "mtime": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reason": {
+                "$ref": "common.schema.json#/$defs/Text"
+              }
+            },
+            "required": [
+              "path",
+              "mtime",
+              "reason"
+            ]
+          }
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "generatedAt": {
+                  "$ref": "common.schema.json#/$defs/DateTime"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "points": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "kind": {
+                        "enum": [
+                          "interest",
+                          "doubt"
+                        ]
+                      },
+                      "text": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "papers": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "common.schema.json#/$defs/PaperRef"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "text",
+                      "papers"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "generatedAt",
+                "summary",
+                "points"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sync": {
+          "type": "object",
+          "properties": {
+            "ids": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "common.schema.json#/$defs/PaperId"
+              }
+            },
+            "queued": {
+              "type": "array",
+              "items": {
+                "$ref": "common.schema.json#/$defs/PaperRef"
+              }
+            }
+          },
+          "required": [
+            "ids",
+            "queued"
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "skipped",
+        "updatedAt",
+        "profile"
+      ]
+    }
+  ]
+}

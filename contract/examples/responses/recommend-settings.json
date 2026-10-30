@@ -57,6 +57,22 @@
   "library": {
     "autoAdd": []
   },
+  "notes": {
+    "sections": {
+      "relation": "和我的研究的关系",
+      "ideas": "想法与疑问",
+      "follow": "要追的论文"
+    },
+    "screening": true,
+    "asSeeds": true,
+    "seedStatuses": [
+      "精读",
+      "已读"
+    ],
+    "seedMinRating": 4,
+    "followToQueue": true,
+    "candidates": true
+  },
   "updatedAt": null,
   "streams": [
     {

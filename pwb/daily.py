@@ -1,4 +1,4 @@
-"""每日推荐流水线（约定 5.2–5.4）：抓取 → 核实中稿 → 初筛 → 分三类 → 速读 → 精选与简报，外加每周的新中稿、发展史。
+"""每日推荐流水线（约定 5.2–5.4）：抓取 → 核实中稿 → 整理阅读笔记 → 初筛 → 分三类 → 速读 → 精选与简报，外加每周的新中稿、发展史。
 
 所有和研究方向有关的文字在 data/profile.json（论文流、方向说明）；流程怎么跑（几点跑、阈值、上限、权重）在
 “每日推荐设置”里（面板“设置 → 每日推荐”，存在数据库，没改过的用这里的 DEFAULTS）。
@@ -22,7 +22,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from . import hotspots, interests, llm, profile, survey
+from . import hotspots, interests, llm, notes, profile, survey
 from .pdfs import _arxiv_pdf, _get
 from .util import TZ, dumps, now, today
 
@@ -38,11 +38,15 @@ DEFAULTS = {
     "pick": {"max": 10, "weights": {"relevance": 0.4, "quality": 0.3, "hf": 0.2, "code": 0.1}},
     "weekly": {"newAccepted": True, "map": True, "classics": False},
     "library": {"autoAdd": []},
+    # 阅读笔记怎么参与推荐（见 notes.py）；sections 是模板里的小节名，改了模板标题要跟着改。
+    "notes": {"sections": {"relation": "和我的研究的关系", "ideas": "想法与疑问", "follow": "要追的论文"},
+              "screening": True, "asSeeds": True, "seedStatuses": ["精读", "已读"], "seedMinRating": 4,
+              "followToQueue": True, "candidates": True},
 }
 SECTIONS = list(DEFAULTS)
 CATEGORIES = ("core", "adjacent", "trending")
 CATEGORY_NAME = {"core": "核心", "adjacent": "邻近", "trending": "热点"}
-STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("classify", "按研究兴趣判定相关性"),
+STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("notes", "整理阅读笔记"), ("classify", "按研究兴趣判定相关性"),
          ("recommend", "分出邻近 / 热点"), ("skim", "速读"), ("pick", "挑选精选、写简报"),
          ("new-accepted", "每周：新中稿入库"), ("map", "每周：更新领域发展史与热点"), ("classics", "每周：更新经典与必读"),
          ("push", "推送")]
@@ -167,7 +171,7 @@ def step_fetch(store, cfg, date, log):
     state = store.get_kv("daily-fetch") or {}
     end = datetime.now(timezone.utc)
     floor = end - timedelta(days=cfg["schedule"]["maxCatchupDays"])
-    added, notes = 0, []
+    added, msgs = 0, []
     enabled = cfg["sources"]["streams"]
     for stream in profile.streams(store):
         if not enabled.get(stream["key"], True):
@@ -178,7 +182,7 @@ def step_fetch(store, cfg, date, log):
         new = sum(_add(store, r["id"], {k: r[k] for k in ("title", "abstract", "authors", "published", "cats")}, date, stream=stream["key"])
                   for r in rows)
         added += new
-        notes.append("{} 新增 {} 篇".format(stream["name"], new))
+        msgs.append("{} 新增 {} 篇".format(stream["name"], new))
         state[stream["key"]] = end.isoformat()
         store.set_kv("daily-fetch", state)
     if cfg["sources"]["huggingface"]:
@@ -191,10 +195,10 @@ def step_fetch(store, cfg, date, log):
                 new += _add(store, p["id"], {k: p[k] for k in ("title", "abstract", "authors", "published")}, date, hf=p["hf"])
             d += timedelta(days=1)
         added += new
-        notes.append("Hugging Face 新增 {} 篇".format(new))
+        msgs.append("Hugging Face 新增 {} 篇".format(new))
         state["huggingface"] = end.isoformat()
         store.set_kv("daily-fetch", state)
-    return "；".join(notes) or "没有启用的来源", added
+    return "；".join(msgs) or "没有启用的来源", added
 
 
 # ---------- 2. 核实中稿 ----------
@@ -293,6 +297,22 @@ CLASSIFY_SCHEMA = {"type": "object", "additionalProperties": False, "required": 
                    "reason": {"type": "string"}}}}}}
 
 
+def _classify_schema(with_points):
+    """有阅读要点时多一个 points 字段：这篇回应了哪几条要点。"""
+    if not with_points:
+        return CLASSIFY_SCHEMA
+    s = copy.deepcopy(CLASSIFY_SCHEMA)
+    item = s["properties"]["items"]["items"]
+    item["required"].append("points")
+    item["properties"]["points"] = {"type": "array", "items": {"type": "integer"}}
+    return s
+
+
+def _point_note(p):
+    """要点的出处：“你在《X》笔记里”。"""
+    return "你在《{}》笔记里".format(p["papers"][0]["title"][:40]) if p.get("papers") else "你的笔记里"
+
+
 def step_classify(store, cfg, date, log, config):
     cands = _rows(store, "new")
     if not cands:
@@ -300,6 +320,7 @@ def step_classify(store, cfg, date, log, config):
     tree = store.get_kv("interests")
     nodes = {n["id"]: n["label"] for n, _, _ in interests.walk((tree or {}).get("domains", []))}
     negatives = _negatives(store, cfg["screen"]["negativeExamples"])
+    pts = notes.points(store, cfg["notes"])
     head = [survey._direction_text(store), "",
             "下面是今天的新论文（标题和摘要）。请逐篇判断它和我的研究是否直接相关：",
             "- relevant：和我的研究方向直接相关才填 true；只是用到了相关技术、或者只沾边的填 false；",
@@ -308,12 +329,18 @@ def step_classify(store, cfg, date, log, config):
             "", "<关键词树>", *(_tree_lines(tree) or ["（还没有关键词）"]), "</关键词树>"]
     if negatives:
         head += ["", "<我标过不相关的论文（反例，类似的不要判为相关）>", *("- " + t for t in negatives), "</我标过不相关的论文>"]
+    if pts:
+        head += ["", "- points：这篇论文直接回应了下面哪几条笔记要点（填编号数字），没有就空着。直接回应了我关心的问题（interest）的，"
+                 "即使没命中关键词也可以判为 relevant；用了我存疑的思路（doubt）的照常判断，在 reason 里说明。",
+                 "", "<我阅读笔记里的要点（interest：我关心的问题；doubt：我存疑的思路）>",
+                 *("{}. ({}) {}".format(i, p["kind"], p["text"]) for i, p in enumerate(pts)), "</我阅读笔记里的要点>"]
+    schema = _classify_schema(bool(pts))
     size = cfg["screen"]["batchSize"]
     batches = [cands[i:i + size] for i in range(0, len(cands), size)]
     jobs = []
     for b, batch in enumerate(batches):
         lines = ["### {}. {}\n{}".format(i, c["data"]["title"], (c["data"]["abstract"] or "（无摘要）")[:1500]) for i, c in enumerate(batch)]
-        jobs.append((b, SYSTEM, "\n".join(head + ["", "<论文列表>", *lines, "</论文列表>"]), CLASSIFY_SCHEMA))
+        jobs.append((b, SYSTEM, "\n".join(head + ["", "<论文列表>", *lines, "</论文列表>"]), schema))
     log("初筛 {} 篇，分 {} 批".format(len(cands), len(batches)))
     results = survey._llm_parallel(store, config, jobs, 3, log)
     core = failed = 0
@@ -329,9 +356,15 @@ def step_classify(store, cfg, date, log, config):
                 failed += 1
                 continue
             matched = [{"nodeId": k, "label": nodes[k]} for k in dict.fromkeys(x.get("keywords") or []) if k in nodes]
-            cand["result"] = {**cand["result"], "relevant": bool(x["relevant"]), "matched": matched, "reason": x.get("reason", "")}
-            if x["relevant"] and matched:
-                cand["result"].update(category="core", why="命中关键词“{}”。{}".format("”“".join(m["label"] for m in matched), x.get("reason", "")))
+            hit = [pts[i] for i in dict.fromkeys(x.get("points") or []) if isinstance(i, int) and 0 <= i < len(pts)]
+            liked, doubted = [p for p in hit if p["kind"] == "interest"], [p for p in hit if p["kind"] == "doubt"]
+            doubt_text = "".join("；用了{}存疑的思路“{}”".format(_point_note(p), p["text"]) for p in doubted[:1])
+            cand["result"] = {**cand["result"], "relevant": bool(x["relevant"]), "matched": matched, "reason": x.get("reason", ""),
+                              "notePoints": [p["id"] for p in hit], "doubt": bool(doubted), "doubtText": doubt_text}
+            noted = "".join("；回应了{}关心的“{}”".format(_point_note(p), p["text"]) for p in liked[:2]) + doubt_text
+            if x["relevant"] and (matched or liked):
+                head_ = "命中关键词“{}”".format("”“".join(m["label"] for m in matched)) if matched else noted.lstrip("；")
+                cand["result"].update(category="core", why="{}。{}".format(head_ + (noted if matched else ""), x.get("reason", "")))
                 _save(store, cand, "recommended")
                 core += 1
             else:
@@ -344,12 +377,12 @@ def step_classify(store, cfg, date, log, config):
 
 # ---------- 4. 邻近 / 热点 ----------
 
-def _seed_index(store, seeds):
-    """种子论文的各种编号和归一化标题 → (论文 ID, 标题, 身份)。"""
+def _seed_index(store, seeds, note_ids=()):
+    """种子论文的各种编号和归一化标题 → (论文 ID, 标题, 身份)。note_ids：精读过的论文（来自阅读笔记）。"""
     role_sql = {"own": "u.own = 1", "watched": "u.watched = 1", "relevant": "u.relevance = '相关'"}
-    index, names = {}, {"own": "本人论文", "watched": "关注的", "relevant": "标为相关的", "library": "论文库里的"}
+    index, names = {}, {"notes": "你精读过的", "own": "本人论文", "watched": "关注的", "relevant": "标为相关的", "library": "论文库里的"}
     with store.conn() as c:
-        rows = []
+        rows = [("notes", r) for r in c.execute("SELECT id, data FROM papers WHERE id IN ({})".format(",".join("?" * len(note_ids))), list(note_ids))]
         for role in seeds:
             if role in role_sql:
                 rows += [(role, r) for r in c.execute("SELECT p.id, p.data FROM papers p JOIN paper_user u ON u.paper_id = p.id WHERE " + role_sql[role])]
@@ -399,7 +432,7 @@ def step_recommend(store, cfg, date, log):
     if not cands:
         return "没有待判定的论文", 0
     lookback = (datetime.fromisoformat(date) - timedelta(days=cfg["adjacent"]["lookbackDays"])).date().isoformat()
-    seeds = _seed_index(store, cfg["adjacent"]["seeds"])
+    seeds = _seed_index(store, cfg["adjacent"]["seeds"], notes.seed_ids(store, cfg["notes"]))
     refs = {}
     if seeds:
         try:
@@ -424,7 +457,8 @@ def step_recommend(store, cfg, date, log):
             hot = [name for name, terms in _hot_terms(current, cand["data"]["streams"]) if grams & terms]
         if hits:
             cand["result"].update(category="adjacent", seeds=[h[0] for h in hits],
-                                  why="引用了{}".format("、".join("{}《{}》".format(role, title[:40]) for _, title, role in hits[:3])))
+                                  why="引用了{}".format("、".join("{}《{}》".format(role, title[:40]) for _, title, role in hits[:3]))
+                                  + cand["result"].get("doubtText", ""))
             _save(store, cand, "recommended")
             adjacent += 1
         elif hf >= cfg["trending"]["minHfUpvotes"] or (hot and hf >= cfg["trending"]["hotspotMinHfUpvotes"]):
@@ -439,7 +473,7 @@ def step_recommend(store, cfg, date, log):
     trending = 0
     for hf, hot, cand in sorted(hot_cands, key=lambda x: -x[0])[:room]:
         parts = (["属于正在上涨的热点“{}”".format("”“".join(dict.fromkeys(hot)))] if hot else []) + ["Hugging Face 点赞 {}".format(hf)]
-        cand["result"].update(category="trending", why="，".join(parts), trendDate=date)
+        cand["result"].update(category="trending", why="，".join(parts) + cand["result"].get("doubtText", ""), trendDate=date)
         _save(store, cand, "recommended")
         trending += 1
     msg = "邻近 {} 篇、热点 {} 篇；{} 篇超过回看期不再判定".format(adjacent, trending, expired)
@@ -549,7 +583,8 @@ def step_skim(store, cfg, date, log, config):
 
 def _score(cand, weights):
     r, skim = cand["result"], cand["result"]["skim"]
-    rel = {"core": 0.7 + 0.15 * min(2, len(r.get("matched") or [])), "adjacent": 0.6, "trending": 0.4}[r["category"]]
+    rel = {"core": 0.7 + 0.15 * min(2, len(r.get("matched") or []) + len(r.get("notePoints") or [])), "adjacent": 0.6, "trending": 0.4}[r["category"]]
+    rel = min(1.0, rel) * (notes.DOUBT_FACTOR if r.get("doubt") else 1)
     hf = min(1.0, ((cand["data"].get("hf") or {}).get("upvotes") or 0) / 50)
     parts = {"relevance": rel, "quality": skim["quality"]["score"] / 10, "hf": hf, "code": 1.0 if skim["codeUrl"] else 0.0}
     total = sum(max(0.0, weights.get(k, 0)) for k in parts) or 1
@@ -604,7 +639,7 @@ def step_pick(store, cfg, date, log, config):
     store.put_doc({"schemaVersion": 1, "kind": "recommendations-day", "generatedAt": now(), "runId": "daily-" + date,
                    "date": date, "counts": counts, "papers": [{**p, "user": store.get_user(p["id"]) if store.resolve(p["id"]) else _blank_user(p["id"])} for p in recs]})
     _update_index(store, date, counts, len(picked))
-    _brief(store, config, date, recs, log)
+    _brief(store, config, date, recs, log, notes.profile_summary(store, cfg["notes"]))
     return "今天推荐 {} 篇（核心 {core}、邻近 {adjacent}、热点 {trending}），精选 {} 篇".format(len(recs), len(picked), **counts), len(recs)
 
 
@@ -620,14 +655,14 @@ def _update_index(store, date, counts, picked):
                    "issues": sorted(issues, key=lambda i: i["date"], reverse=True)})
 
 
-def _brief(store, config, date, recs, log):
+def _brief(store, config, date, recs, log, reading=""):
     picks = [p for p in recs if p["picked"]]
     summary, highlights = "", []
     if picks:
         lines = ["{}. [{}] {}：{}".format(i, CATEGORY_NAME[p["category"]], p["titleZh"], p["summary"]) for i, p in enumerate(picks)]
-        prompt = "\n".join([survey._direction_text(store), "",
+        prompt = "\n".join([survey._direction_text(store), *(["", "我最近读论文的笔记要点：" + reading] if reading else []), "",
                             "下面是今天给我精选的论文（编号. [类别] 中文标题：速读）。请写今天的简报：",
-                            "- summary：3–4 句中文，概括今天值得注意的进展，和我的方向有什么关系；",
+                            "- summary：3–4 句中文，概括今天值得注意的进展，和我的方向{}有什么关系；".format("、笔记里关心的问题" if reading else ""),
                             "- highlights：最多 5 条要点，每条 title（短标题）、text（1–2 句）、refs（支撑它的论文编号）。", "",
                             "<精选>", *lines, "</精选>"])
         try:
@@ -698,6 +733,11 @@ def step_classics(store, cfg, date, log, config):
 def _run_doc(store, date):
     doc = store.get_doc("pipeline")
     run = (doc or {}).get("latestRun")
+    if run and run["date"] == date and [s["key"] for s in run["steps"]] != [k for k, _ in STEPS]:
+        # 今天这次是旧版本跑的（步骤少），补上新加的步骤。
+        old = {s["key"]: s for s in run["steps"]}
+        run["steps"] = [old.get(k) or {"key": k, "name": n, "status": "pending", "startedAt": None, "finishedAt": None, "attempts": 0, "error": None}
+                        for k, n in STEPS]
     if not run or run["date"] != date:
         run = {"runId": "daily-" + date, "date": date, "status": "running", "startedAt": now(), "finishedAt": None,
                "steps": [{"key": k, "name": n, "status": "pending", "startedAt": None, "finishedAt": None, "attempts": 0, "error": None}
@@ -744,10 +784,10 @@ def run(store, config, progress, only=None, date=None):
                 plan.append((key, key, None))
         else:
             plan.append((key, key, None))
-    funcs = {"fetch": step_fetch, "version-check": step_version_check, "classify": step_classify, "recommend": step_recommend,
+    funcs = {"fetch": step_fetch, "version-check": step_version_check, "notes": notes.step_notes, "classify": step_classify, "recommend": step_recommend,
              "skim": step_skim, "pick": step_pick, "new-accepted": step_new_accepted, "map": step_map, "classics": step_classics}
-    needs_llm = {"classify", "skim", "pick", "new-accepted", "map", "classics"}
-    notes = []
+    needs_llm = {"notes", "classify", "skim", "pick", "new-accepted", "map", "classics"}
+    messages = []
     for n, (key, func, skip) in enumerate(plan, 1):
         step = next(s for s in run_["steps"] if s["key"] == key)
         if skip:
@@ -762,13 +802,13 @@ def run(store, config, progress, only=None, date=None):
             f = funcs[func]
             msg, _ = f(store, cfg, date, log, config) if key in needs_llm else f(store, cfg, date, log)
             step.update(status="ok", finishedAt=now())
-            notes.append(msg)
+            messages.append(msg)
             if key in ("new-accepted", "map", "classics"):
                 _weekly_done(store, key, date)
         except Exception as e:  # noqa: BLE001 — 一步失败不影响后面的步骤，记下来在面板上显示
             log_.exception("每日流水线 %s 失败", key)
             step.update(status="failed", finishedAt=now(), error="{}: {}".format(type(e).__name__, e)[:500])
-            notes.append("{}失败：{}".format(step["name"], e))
+            messages.append("{}失败：{}".format(step["name"], e))
         _put_run(store, doc, run_, cfg)
     statuses = [s["status"] for s in run_["steps"]]
     run_["status"] = "failed" if statuses.count("failed") == len([s for s in statuses if s != "skipped"]) and "failed" in statuses \
@@ -777,7 +817,7 @@ def run(store, config, progress, only=None, date=None):
     _put_run(store, doc, run_, cfg)
     if not only:
         store.set_kv("daily-last-run", date)
-    return "；".join(notes), [{"kind": "data", "path": "/recommendations/" + date}, {"kind": "data", "path": "/pipeline"}]
+    return "；".join(messages), [{"kind": "data", "path": "/recommendations/" + date}, {"kind": "data", "path": "/pipeline"}]
 
 
 # ---------- 推荐论文写进论文表 ----------

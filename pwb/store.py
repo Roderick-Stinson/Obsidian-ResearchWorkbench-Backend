@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS paper_user (
 CREATE TABLE IF NOT EXISTS deep_reads (
   paper_id TEXT PRIMARY KEY REFERENCES papers(id) ON UPDATE CASCADE ON DELETE CASCADE,
   body TEXT NOT NULL, generated_at TEXT NOT NULL);
+-- 阅读笔记：vault 里的笔记由面板发过来（后端不读 vault），sections 是按标题分好的各节。
+CREATE TABLE IF NOT EXISTS notes (
+  paper_id TEXT PRIMARY KEY, path TEXT NOT NULL, title TEXT NOT NULL, status TEXT, rating INTEGER,
+  mtime INTEGER NOT NULL, sections TEXT NOT NULL, synced_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS user_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL);
 -- 旧版把 vault 里的本人论文文件传到这里；本人论文现在和其他论文一样存在 papers 表。
 DROP TABLE IF EXISTS own_papers;
@@ -46,6 +50,8 @@ DOC_KEYS = {
 DOC_KINDS = {"overview", "pipeline", "brief", "recommendations-index", "recommendations-day", "classics", "map",
              "results-index", "results-benchmark", "ideas", "hotspots", "reports-index", "report",
              "experiments", "inbox"}
+# 这些来源的论文（每日推荐、笔记里要追的论文）不算进论文库，除非你标了相关 / 重点关注 / 本人论文，或者写了阅读笔记。
+HIDDEN_ORIGINS = ("recommendation", "note-follow")
 # paper 返回体里由存储层拼出来、不存进 data 的字段。
 PAPER_COMPUTED = ("kind", "schemaVersion", "id", "aliases", "hasPdf", "hasDeepRead", "user", "addedAt", "updatedAt")
 
@@ -145,6 +151,7 @@ class Store:
             c.execute("UPDATE papers SET id = ?, updated_at = ? WHERE id = ?", (new_id, now(), old_id))
             c.execute("INSERT INTO paper_aliases VALUES (?, ?)", (old_id, new_id))
             c.execute("UPDATE papers SET search = search || ' ' || ? WHERE id = ?", (new_id.lower(), new_id))
+            c.execute("UPDATE notes SET paper_id = ? WHERE paper_id = ?", (new_id, old_id))
             queue = self._kv(c, "queue")
             if queue and old_id in queue["paperIds"]:
                 queue["paperIds"] = [new_id if p == old_id else p for p in queue["paperIds"]]
@@ -185,6 +192,7 @@ class Store:
         with self.conn() as c:
             rows = c.execute("SELECT * FROM papers").fetchall()
             users = {r["paper_id"]: r for r in c.execute("SELECT * FROM paper_user")}
+            noted = {r["paper_id"] for r in c.execute("SELECT paper_id FROM notes")}
             papers = []
             for row in rows:
                 d = json.loads(row["data"])
@@ -195,8 +203,8 @@ class Store:
         chosen = {"topic": topic, "venue": venue, "year": str(year) if year else None, "status": status, "relevance": relevance}
 
         def basic(row, d, u):
-            if d.get("origin") == "recommendation" and not (u["watched"] or u["own"] or u["relevance"] == "相关"):
-                # 每日推荐里你标过、但还没标“相关 / 重点关注 / 本人论文”的论文：存着你的标记，但不算进论文库。
+            if d.get("origin") in HIDDEN_ORIGINS and not (u["watched"] or u["own"] or u["relevance"] == "相关" or row["id"] in noted):
+                # 每日推荐里你标过、但还没标“相关 / 重点关注 / 本人论文”、也没写笔记的论文：存着你的标记，但不算进论文库。
                 return False
             if watched is not None and u["watched"] != watched:
                 return False
@@ -252,8 +260,9 @@ class Store:
         week_ago = (datetime.now(TZ) - timedelta(days=7)).isoformat(timespec="seconds")
         with self.conn() as c:
             shown = {r["id"]: r["added_at"] for r in c.execute(
-                "SELECT p.id, p.added_at, p.data, u.watched, u.own, u.relevance FROM papers p LEFT JOIN paper_user u ON u.paper_id = p.id")
-                if json.loads(r["data"]).get("origin") != "recommendation" or r["watched"] or r["own"] or r["relevance"] == "相关"}
+                "SELECT p.id, p.added_at, p.data, u.watched, u.own, u.relevance, n.paper_id AS noted FROM papers p "
+                "LEFT JOIN paper_user u ON u.paper_id = p.id LEFT JOIN notes n ON n.paper_id = p.id")
+                if json.loads(r["data"]).get("origin") not in HIDDEN_ORIGINS or r["watched"] or r["own"] or r["relevance"] == "相关" or r["noted"]}
             total, last = len(shown), max(shown.values(), default=None)
             relevant = sum(1 for (pid, d) in c.execute("SELECT id, data FROM papers")
                            if pid in shown and json.loads(d).get("libraryRelevance") in ("core", "related"))
@@ -287,6 +296,24 @@ class Store:
             if not pid:
                 raise KeyError(body["paperId"])
             c.execute("INSERT OR REPLACE INTO deep_reads VALUES (?, ?, ?)", (pid, dumps({**body, "paperId": pid}), body["generatedAt"]))
+
+    # ---------- 阅读笔记 ----------
+
+    def get_notes(self):
+        """全部笔记，paper_id 换成现在的主 ID（论文中稿换了 ID 也对得上）。"""
+        with self.conn() as c:
+            rows = c.execute("SELECT * FROM notes ORDER BY mtime DESC").fetchall()
+            return [{"paperId": self.resolve(r["paper_id"], c) or r["paper_id"], "path": r["path"], "title": r["title"],
+                     "status": r["status"], "rating": r["rating"], "mtime": r["mtime"], "sections": json.loads(r["sections"]),
+                     "syncedAt": r["synced_at"]} for r in rows]
+
+    def replace_notes(self, notes):
+        """面板每次发来全部笔记：整体替换（vault 里删掉的笔记这里也删掉）。"""
+        with self.conn() as c:
+            c.execute("DELETE FROM notes")
+            for n in notes:
+                c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (n["paperId"], n["path"], n["title"], n.get("status"),
+                          n.get("rating"), n["mtime"], dumps(n["sections"]), now()))
 
     # ---------- 你的数据 ----------
 

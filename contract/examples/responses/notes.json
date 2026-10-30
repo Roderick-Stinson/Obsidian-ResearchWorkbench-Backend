@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "notes",
+  "updatedAt": "2026-10-27T15:39:49+08:00",
+  "items": [
+    {
+      "paperId": "arxiv-2502.04180",
+      "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
+      "title": "MaAS 用超网搜索多智能体架构",
+      "status": "精读",
+      "rating": 5,
+      "mtime": 1761700000000,
+      "sections": [
+        "逻辑链",
+        "1. 研究动机",
+        "我的评价",
+        "和我的研究的关系",
+        "想法与疑问",
+        "要追的论文"
+      ],
+      "seed": true
+    }
+  ],
+  "skipped": [
+    {
+      "path": "论文阅读/论文笔记整理/还没填 ID 的笔记.md",
+      "mtime": 1761600000000,
+      "reason": "paper_id 对不上论文：（空）"
+    }
+  ],
+  "profile": {
+    "generatedAt": "2026-10-27T15:39:49+08:00",
+    "summary": "（示例）你最关心按查询自适应地生成多智能体架构，并怀疑自演化带来的增益只是选择噪声。",
+    "points": [
+      {
+        "id": "pt-0",
+        "kind": "interest",
+        "text": "按查询难度自适应选择架构，而不是一个架构打天下",
+        "papers": [
+          {
+            "id": "arxiv-2502.04180",
+            "title": "Multi-agent Architecture Search via Agentic Supernet",
+            "url": "https://arxiv.org/abs/2502.04180"
+          }
+        ]
+      },
+      {
+        "id": "pt-1",
+        "kind": "doubt",
+        "text": "只在单一基准上报告的自演化增益",
+        "papers": [
+          {
+            "id": "arxiv-2502.04180",
+            "title": "Multi-agent Architecture Search via Agentic Supernet",
+            "url": "https://arxiv.org/abs/2502.04180"
+          }
+        ]
+      }
+    ]
+  }
+}

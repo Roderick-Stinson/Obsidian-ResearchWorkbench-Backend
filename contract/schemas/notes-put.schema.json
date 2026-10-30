@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/notes-put.schema.json",
+  "title": "同步阅读笔记（整体替换）",
+  "type": "object",
+  "properties": {
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "paperId": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "title": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mtime": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "heading": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                },
+                "level": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 6
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "heading",
+                "level",
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "paperId",
+          "path",
+          "title",
+          "mtime",
+          "sections"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 5000
+    }
+  },
+  "required": [
+    "notes"
+  ],
+  "additionalProperties": false
+}

@@ -231,7 +231,7 @@ def test_candidate_accept_and_reject(client, seeded):
     assert_contract(tree, "interests")
     added = tree["domains"][0]["children"][-1]
     assert added["label"] == "Agent Harness 设计与评测" and added["origin"] == "candidate" and added["evidence"]
-    assert tree["candidates"] == []
+    assert [c["id"] for c in tree["candidates"]] == ["cand-skill-reuse"]
     assert client.post(API + "/me/interests/candidates/cand-harness/accept").status_code == 404
     leaf = tree["domains"][0]["children"][0]["children"][0]["id"]
     tree = client.post(API + "/me/interests/nodes/{}/remove".format(leaf)).json()

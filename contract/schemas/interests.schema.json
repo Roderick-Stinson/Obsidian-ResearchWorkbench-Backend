@@ -363,6 +363,12 @@
                 "items": {
                   "$ref": "common.schema.json#/$defs/PaperRef"
                 }
+              },
+              "source": {
+                "enum": [
+                  "trend",
+                  "notes"
+                ]
               }
             },
             "required": [

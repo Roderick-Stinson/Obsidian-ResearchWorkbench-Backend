@@ -78,7 +78,28 @@
           "title": "轻量级代码智能体 Harness 与模型搭配研究",
           "url": "https://arxiv.org/abs/2610.32131"
         }
-      ]
+      ],
+      "source": "trend"
+    },
+    {
+      "id": "cand-skill-reuse",
+      "parentId": "kw-mas",
+      "level": 2,
+      "label": "技能复用与组合",
+      "reason": "你在两篇笔记里都想追技能能否跨任务复用",
+      "growth": {
+        "paperCount": 2,
+        "windowDays": 0,
+        "changePct": 0
+      },
+      "examples": [
+        {
+          "id": "arxiv-2502.04180",
+          "title": "Multi-agent Architecture Search via Agentic Supernet",
+          "url": "https://arxiv.org/abs/2502.04180"
+        }
+      ],
+      "source": "notes"
     }
   ]
 }
