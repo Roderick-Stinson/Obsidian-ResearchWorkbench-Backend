@@ -49,6 +49,7 @@ def norm_name(name):
         last, first = name.split(",", 1)
         name = first + " " + last
     name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode() or name
+    name = name.replace("-", "")  # “Yao-Dong Yang”和“Yaodong Yang”算同一个人
     return " ".join(sorted(re.sub(r"[^\w\s]", " ", name.lower()).split()))
 
 
@@ -122,7 +123,8 @@ def find_work(paper):
     title = re.sub(r"[^\w\s]", " ", paper["title"]).strip()
     if not title or title == paper["id"]:
         return None
-    res = _oa("works", {"filter": "title.search:" + title[:250], "per-page": 5,
+    # 转成小写：标题里的 AND / OR / NOT 会被 OpenAlex 当成检索运算符
+    res = _oa("works", {"filter": "title.search:" + title[:250].lower(), "per-page": 5,
                         "select": "id,title,publication_year,authorships"}).get("results", [])
     key = survey._norm_title(paper["title"])
     same = [w for w in res if survey._norm_title(w.get("title")) == key
@@ -336,6 +338,11 @@ def enrich(store, config, papers, log, read_pdf=True, refresh=False):
         except OpenAlexLimit as e:
             blocked = str(e)
             log(blocked + "，剩下的论文下次再查")
+            continue
+        except urllib.error.HTTPError as e:
+            log("{}：OpenAlex 没查成（HTTP {}）".format(p["id"], e.code))
+            if 400 <= e.code < 500:
+                looked.add(p["id"])  # 请求本身有问题，重查也一样，记成查过了
             continue
         except Exception as e:  # noqa: BLE001 — 这次没查成（网络等），下次再查
             log("{}：OpenAlex 没查成（{}）".format(p["id"], type(e).__name__))

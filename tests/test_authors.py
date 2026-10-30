@@ -21,7 +21,7 @@ def fake_oa(calls):
     def oa(path, params):
         calls.append((path, params))
         if path == "works" and "title.search" in params.get("filter", ""):
-            return {"results": [WORK] if "Agent Teams Search" in params["filter"] else []}
+            return {"results": [WORK] if "agent teams search" in params["filter"] else []}
         if path == "institutions" and "filter" in params:
             return {"results": [{"id": OA + "I1", "display_name": "Chinese Academy of Sciences", "country_code": "CN"}]}
         if path == "institutions" and "search" in params:
@@ -38,6 +38,7 @@ def fake_oa(calls):
 
 def test_names():
     assert authors.norm_name("Zhang, Guibin") == authors.norm_name("Guibin Zhang") == authors.norm_name("zhang guibin")
+    assert authors.norm_name("Yao-Dong Yang") == authors.norm_name("Yaodong Yang")
     assert authors.display_name("Zhang, Guibin") == "Guibin Zhang" and authors.display_name("Li Na") == "Li Na"
     assert authors.person_key("Guibin Zhang") == "n-guibin-zhang" and authors.person_key("x", "A1") == "A1"
 
