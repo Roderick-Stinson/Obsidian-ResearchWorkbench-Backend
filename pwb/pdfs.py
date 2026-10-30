@@ -17,7 +17,7 @@ from .survey import _norm_title
 from .util import now
 
 UA = "paper-workbench/0.1 (personal research library; polite bulk PDF download)"
-MIN_INTERVAL = {"export.arxiv.org": 3.2, "arxiv.org": 3.2}
+MIN_INTERVAL = {"export.arxiv.org": 3.2, "arxiv.org": 3.2, "api.openalex.org": 0.12}  # OpenAlex 允许每秒 10 次
 DEFAULT_INTERVAL = 1.2
 MAX_BYTES = 100 * 2**20
 _last = {}

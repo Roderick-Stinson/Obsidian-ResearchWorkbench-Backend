@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/follow-put.schema.json",
+  "title": "关注一个人",
+  "type": "object",
+  "properties": {
+    "name": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "openalexId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "institution": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "additionalProperties": false
+}

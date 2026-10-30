@@ -22,7 +22,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from . import hotspots, interests, llm, notes, profile, survey
+from . import authors, hotspots, interests, llm, notes, profile, survey
 from .pdfs import _arxiv_pdf, _get
 from .util import TZ, dumps, now, today
 
@@ -42,11 +42,13 @@ DEFAULTS = {
     "notes": {"sections": {"relation": "和我的研究的关系", "ideas": "想法与疑问", "follow": "要追的论文"},
               "screening": True, "asSeeds": True, "seedStatuses": ["精读", "已读"], "seedMinRating": 4,
               "followToQueue": True, "candidates": True},
+    # 作者机构（见 authors.py）：每天给新进论文库的论文补上；关注的人有新论文时推荐出来。
+    "authors": {"daily": True, "readPdf": True, "maxPerDay": 60, "followRecommend": True},
 }
 SECTIONS = list(DEFAULTS)
 CATEGORIES = ("core", "adjacent", "trending")
 CATEGORY_NAME = {"core": "核心", "adjacent": "邻近", "trending": "热点"}
-STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("notes", "整理阅读笔记"), ("classify", "按研究兴趣判定相关性"),
+STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("affiliations", "补作者机构"), ("notes", "整理阅读笔记"), ("classify", "按研究兴趣判定相关性"),
          ("recommend", "分出邻近 / 热点"), ("skim", "速读"), ("pick", "挑选精选、写简报"),
          ("new-accepted", "每周：新中稿入库"), ("map", "每周：更新领域发展史与热点"), ("classics", "每周：更新经典与必读"),
          ("push", "推送")]
@@ -198,6 +200,13 @@ def step_fetch(store, cfg, date, log):
         msgs.append("Hugging Face 新增 {} 篇".format(new))
         state["huggingface"] = end.isoformat()
         store.set_kv("daily-fetch", state)
+    if cfg["authors"]["followRecommend"]:
+        since = (datetime.fromisoformat(date) - timedelta(days=cfg["adjacent"]["lookbackDays"])).date().isoformat()
+        works = authors.followed_works(store, since, log)
+        new = sum(_add(store, arxiv, {**fields, "followed": [p["key"] for p in who]}, date) for arxiv, fields, who in works)
+        if works:
+            msgs.append("关注的人的新论文 {} 篇（新增 {} 篇）".format(len(works), new))
+        added += new
     return "；".join(msgs) or "没有启用的来源", added
 
 
@@ -427,6 +436,29 @@ def _hot_terms(current, cand_streams):
     return [t for key, terms in current.items() if not cand_streams or key in cand_streams for t in terms]
 
 
+def _follow_hits(store, cand):
+    """这篇候选的作者里你关注的人：OpenAlex 按人取来的直接算，其余按名字比。"""
+    people = (store.get_kv("follows") or {}).get("people", [])
+    keys = set(cand["data"].get("followed") or [])
+    return [p for p in people if p["key"] in keys] or authors.followed_hits(store, cand["data"].get("authors"))
+
+
+def _follow_text(people, insts):
+    return "来自你关注的" + "、".join("{}{}".format(p["name"], "（{}）".format(authors.inst_name(insts, p["institution"])) if p.get("institution") else "")
+                                 for p in people[:3])
+
+
+def step_affiliations(store, cfg, date, log, config):
+    """给还没整理过作者机构的论文补上（每天有上限，全库补一遍用“整理作者机构”任务）。"""
+    if not cfg["authors"]["daily"]:
+        return "设置里关闭了", 0
+    papers = authors.todo_papers(store, limit=cfg["authors"]["maxPerDay"], read_pdf=cfg["authors"]["readPdf"])
+    if not papers:
+        return "论文库里的论文都整理过了", 0
+    oa, pdf, blocked = authors.enrich(store, config, papers, log, cfg["authors"]["readPdf"])
+    return "补了 {} 篇论文的作者机构（OpenAlex {} 篇，PDF {} 篇）{}".format(len(papers), oa, pdf, "；" + blocked if blocked else ""), len(papers)
+
+
 def step_recommend(store, cfg, date, log):
     cands = _rows(store, "pending")
     if not cands:
@@ -442,6 +474,8 @@ def step_recommend(store, cfg, date, log):
             log("取引用关系失败（{}），这次只判定热点".format(e))
     adjacent = expired = 0
     hot_cands = []
+    follow_on = cfg["authors"]["followRecommend"]
+    insts = store.get_kv("institutions") or {}
     current = _current_hotspots(store) if cfg["trending"]["useHotspots"] else {}
     for cand in cands:
         hits = []
@@ -455,7 +489,14 @@ def step_recommend(store, cfg, date, log):
         if cfg["trending"]["useHotspots"]:
             grams = hotspots.grams(text)
             hot = [name for name, terms in _hot_terms(current, cand["data"]["streams"]) if grams & terms]
-        if hits:
+        fol = _follow_hits(store, cand) if follow_on else []
+        if fol:
+            cand["result"].update(category="adjacent", followed=[p["key"] for p in fol], seeds=[h[0] for h in hits],
+                                  why=_follow_text(fol, insts) + ("；引用了" + "、".join("{}《{}》".format(role, title[:40]) for _, title, role in hits[:2]) if hits else "")
+                                  + cand["result"].get("doubtText", ""))
+            _save(store, cand, "recommended")
+            adjacent += 1
+        elif hits:
             cand["result"].update(category="adjacent", seeds=[h[0] for h in hits],
                                   why="引用了{}".format("、".join("{}《{}》".format(role, title[:40]) for _, title, role in hits[:3]))
                                   + cand["result"].get("doubtText", ""))
@@ -484,13 +525,16 @@ def step_recommend(store, cfg, date, log):
 
 # ---------- 5. 速读 ----------
 
-SKIM_ITEM = {"type": "object", "additionalProperties": False, "required": ["titleZh", "summary", "quality", "rationale", "codeUrl"],
+SKIM_ITEM = {"type": "object", "additionalProperties": False, "required": ["titleZh", "summary", "quality", "rationale", "codeUrl", "institutions"],
              "properties": {"titleZh": {"type": "string"}, "summary": {"type": "string"}, "quality": {"type": "number"},
-                            "rationale": {"type": "string"}, "codeUrl": {"type": ["string", "null"]}}}
+                            "rationale": {"type": "string"}, "codeUrl": {"type": ["string", "null"]},
+                            "institutions": {"type": "array", "items": {"type": "string"}}}}
 SKIM_RULES = ["- titleZh：中文结论式标题，一句话说出这篇做了什么、效果如何（例如“用 X 把 Y 的成本降了一半”），不要照译原标题；",
               "- summary：2–3 句中文速读：解决什么问题、怎么做、主要结果；",
               "- quality：0–10 分的质量判断（问题是否重要、方法是否新、实验是否扎实），rationale 一句理由；",
-              "- codeUrl：正文或摘要里给出的开源代码地址，没有填 null。"]
+              "- codeUrl：正文或摘要里给出的开源代码地址，没有填 null；",
+              "- institutions：作者的机构（大学、公司、研究院一级的中文通行名，例如 清华大学、上海人工智能实验室、Google DeepMind），"
+              "通讯作者的机构排在前面，最多 5 个；正文里看不到机构（只有摘要）就空着。"]
 GITHUB = re.compile(r"https?://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 
 
@@ -512,7 +556,8 @@ def _apply_skim(cand, x, full):
         code = None
     cand["result"]["skim"] = {"titleZh": x["titleZh"].strip() or cand["data"]["title"], "summary": x["summary"].strip(),
                               "quality": {"score": max(0.0, min(10.0, float(x["quality"]))), "rationale": x.get("rationale", "")},
-                              "codeUrl": code, "fullText": full}
+                              "codeUrl": code, "fullText": full,
+                              "institutions": [i.strip() for i in x.get("institutions") or [] if isinstance(i, str) and i.strip()][:5]}
 
 
 def step_skim(store, cfg, date, log, config):
@@ -591,14 +636,16 @@ def _score(cand, weights):
     return round(sum(max(0.0, weights.get(k, 0)) * v for k, v in parts.items()) / total, 4)
 
 
-def _rec(store, cand, stream_names):
+def _rec(store, cand, stream_names, follow_note=""):
     r, d, skim = cand["result"], cand["data"], cand["result"]["skim"]
     pid = store.resolve("arxiv-" + cand["id"]) or "arxiv-" + cand["id"]
     sources = [stream_names.get(s, s) for s in d["streams"]] + (["Hugging Face"] if d.get("hf") else [])
     return {"id": pid, "titleZh": skim["titleZh"], "titleEn": d["title"], "summary": skim["summary"] or d["abstract"][:300] or d["title"],
             "publishedAt": d.get("published") or cand["firstSeen"], "url": "https://arxiv.org/abs/" + cand["id"], "codeUrl": skim["codeUrl"],
             "hfUpvotes": (d.get("hf") or {}).get("upvotes") or 0, "citations": {"count": None, "updatedAt": None},
-            "quality": skim["quality"], "category": r["category"], "reason": r.get("why") or r.get("reason") or CATEGORY_NAME[r["category"]],
+            "quality": skim["quality"], "category": r["category"],
+            "reason": (r.get("why") or r.get("reason") or CATEGORY_NAME[r["category"]]) + (follow_note if not r.get("followed") else ""),
+            "institutions": skim.get("institutions") or [],
             "matchedKeywords": r.get("matched") or [], "score": r["score"], "picked": bool(r.get("picked")), "sources": sources}
 
 
@@ -634,7 +681,12 @@ def step_pick(store, cfg, date, log, config):
     except (FileNotFoundError, ValueError):
         pass
     order = {"core": 0, "adjacent": 1, "trending": 2}
-    recs = sorted((_rec(store, c, names) for c in today_cands), key=lambda p: (order[p["category"]], -p["score"]))
+    insts = store.get_kv("institutions") or {}
+
+    def follow_note(c):  # 核心 / 热点里也有你关注的人的论文：理由里提一句
+        fol = _follow_hits(store, c) if cfg["authors"]["followRecommend"] else []
+        return "；" + _follow_text(fol, insts) if fol else ""
+    recs = sorted((_rec(store, c, names, follow_note(c)) for c in today_cands), key=lambda p: (order[p["category"]], -p["score"]))
     counts = {k: sum(1 for p in recs if p["category"] == k) for k in CATEGORIES}
     store.put_doc({"schemaVersion": 1, "kind": "recommendations-day", "generatedAt": now(), "runId": "daily-" + date,
                    "date": date, "counts": counts, "papers": [{**p, "user": store.get_user(p["id"]) if store.resolve(p["id"]) else _blank_user(p["id"])} for p in recs]})
@@ -784,9 +836,9 @@ def run(store, config, progress, only=None, date=None):
                 plan.append((key, key, None))
         else:
             plan.append((key, key, None))
-    funcs = {"fetch": step_fetch, "version-check": step_version_check, "notes": notes.step_notes, "classify": step_classify, "recommend": step_recommend,
+    funcs = {"fetch": step_fetch, "version-check": step_version_check, "affiliations": step_affiliations, "notes": notes.step_notes, "classify": step_classify, "recommend": step_recommend,
              "skim": step_skim, "pick": step_pick, "new-accepted": step_new_accepted, "map": step_map, "classics": step_classics}
-    needs_llm = {"notes", "classify", "skim", "pick", "new-accepted", "map", "classics"}
+    needs_llm = {"affiliations", "notes", "classify", "skim", "pick", "new-accepted", "map", "classics"}
     messages = []
     for n, (key, func, skip) in enumerate(plan, 1):
         step = next(s for s in run_["steps"] if s["key"] == key)

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "teams",
+  "total": 1,
+  "coverage": {
+    "papers": 989,
+    "withAffiliations": 812
+  },
+  "items": [
+    {
+      "key": "I0000000003",
+      "name": "Example University",
+      "nameZh": "（示例）某大学",
+      "country": "CN",
+      "paperCount": 12,
+      "score": 21.5,
+      "latestYear": 2026,
+      "keywords": [
+        {
+          "label": "多智能体架构搜索",
+          "count": 7
+        }
+      ],
+      "units": [
+        "Department of Computer Science"
+      ],
+      "people": [
+        {
+          "key": "A0000000001",
+          "name": "Example Advisor",
+          "openalexId": "A0000000001",
+          "paperCount": 9,
+          "correspondingCount": 6,
+          "lastAuthorCount": 8,
+          "followed": true
+        }
+      ],
+      "papers": [
+        {
+          "id": "openreview-imcyVlzpXh",
+          "title": "MaAS：基于智能体超网的多智能体架构搜索"
+        }
+      ]
+    }
+  ]
+}

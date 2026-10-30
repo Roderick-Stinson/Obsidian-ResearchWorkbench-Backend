@@ -160,6 +160,12 @@
               },
               "user": {
                 "$ref": "common.schema.json#/$defs/PaperUser"
+              },
+              "institutions": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
               }
             },
             "required": [

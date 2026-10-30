@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/teams.schema.json",
+  "title": "团队（按机构聚合论文库）",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "teams"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "nameZh": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "country": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "paperCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "score": {
+                "type": "number"
+              },
+              "latestYear": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "keywords": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "count"
+                  ]
+                }
+              },
+              "units": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
+              },
+              "people": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "name": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "openalexId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "paperCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "correspondingCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "lastAuthorCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "followed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "name",
+                    "openalexId",
+                    "paperCount",
+                    "correspondingCount",
+                    "lastAuthorCount",
+                    "followed"
+                  ]
+                }
+              },
+              "papers": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/PaperRef"
+                }
+              }
+            },
+            "required": [
+              "key",
+              "name",
+              "nameZh",
+              "country",
+              "paperCount",
+              "score",
+              "latestYear",
+              "keywords",
+              "units",
+              "people",
+              "papers"
+            ]
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "papers": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "withAffiliations": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "papers",
+            "withAffiliations"
+          ]
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "coverage"
+      ]
+    }
+  ]
+}

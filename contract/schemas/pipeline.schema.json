@@ -82,6 +82,7 @@
                         "enum": [
                           "fetch",
                           "version-check",
+                          "affiliations",
                           "notes",
                           "classify",
                           "skim",

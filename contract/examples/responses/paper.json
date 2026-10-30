@@ -61,5 +61,42 @@
     "own": false,
     "discussionStatus": "待讨论",
     "updatedAt": "2026-10-27T15:39:49+08:00"
+  },
+  "authorsDetail": [
+    {
+      "name": "Guibin Zhang",
+      "personKey": "n-guibin-zhang",
+      "corresponding": false,
+      "affiliations": [
+        {
+          "key": "x-exampleuniversity",
+          "name": "Example University",
+          "nameZh": "（示例）某大学",
+          "parent": null,
+          "unit": "Department of Computer Science"
+        }
+      ]
+    },
+    {
+      "name": "Example Advisor",
+      "personKey": "A0000000001",
+      "corresponding": true,
+      "affiliations": [
+        {
+          "key": "I0000000002",
+          "name": "Example Lab of Example University",
+          "nameZh": "（示例）某大学某实验室",
+          "parent": "（示例）某大学",
+          "unit": null
+        }
+      ]
+    }
+  ],
+  "affiliations": {
+    "sources": [
+      "openalex",
+      "pdf"
+    ],
+    "updatedAt": "2026-10-27T15:39:49+08:00"
   }
 }

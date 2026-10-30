@@ -274,6 +274,114 @@
           "items": {
             "$ref": "common.schema.json#/$defs/Text"
           }
+        },
+        "authorsDetail": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "personKey": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "corresponding": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "affiliations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "name": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "nameZh": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "parent": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "unit": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "name",
+                    "nameZh",
+                    "parent",
+                    "unit"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "personKey",
+              "corresponding",
+              "affiliations"
+            ]
+          }
+        },
+        "affiliations": {
+          "type": "object",
+          "properties": {
+            "sources": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "openalex",
+                  "pdf"
+                ]
+              }
+            },
+            "updatedAt": {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            "pdfTried": {
+              "type": "boolean"
+            },
+            "openalexTried": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "sources",
+            "updatedAt"
+          ]
         }
       },
       "required": [

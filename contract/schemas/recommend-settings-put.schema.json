@@ -206,6 +206,27 @@
       "required": [],
       "additionalProperties": false
     },
+    "authors": {
+      "type": "object",
+      "properties": {
+        "daily": {
+          "type": "boolean"
+        },
+        "readPdf": {
+          "type": "boolean"
+        },
+        "maxPerDay": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "followRecommend": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
     "notes": {
       "type": "object",
       "properties": {

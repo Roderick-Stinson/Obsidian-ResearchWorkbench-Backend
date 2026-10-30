@@ -236,7 +236,10 @@ class Store:
         else:  # 最近加入：加入时间倒序，同一时间按 ID 正序
             hits.sort(key=lambda p: p[0]["id"])
             hits.sort(key=lambda p: p[0]["added_at"], reverse=True)
+        from .authors import summary
+        insts = self.get_kv("institutions") or {}
         items = [{"id": row["id"], "title": d["title"], "titleZh": d.get("titleZh"), "firstAuthor": d.get("firstAuthor", ""),
+                  "institutions": summary(d, insts),
                   "year": d.get("year"), "venue": d.get("venue", ""), "publicationStatus": d["publicationStatus"],
                   "hasPdf": bool(row["pdf_file"]), "citations": d.get("citations", {"count": None, "updatedAt": None}),
                   "summary": d.get("summary") or "", "urls": d.get("urls") or {"source": None, "pdf": None, "code": None},

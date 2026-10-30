@@ -2,7 +2,7 @@
 
 - macOS：写 ~/Library/LaunchAgents/<LABEL>.plist，用 launchctl 加载（登录后启动，退出了自动拉起）；
 - Linux：写 ~/.config/systemd/user/pwb.service，用 systemctl --user 启用。
-后端的日志写到数据目录的 serve.log。环境变量（PWB_*、S2_API_KEY、DEEPSEEK_*）在安装时照抄进去，改了要重新安装。
+后端的日志写到数据目录的 serve.log。环境变量（PWB_*、S2_API_KEY、OPENALEX_MAILTO、DEEPSEEK_*）在安装时照抄进去，改了要重新安装。
 """
 import os
 import platform
@@ -15,7 +15,7 @@ from .config import ROOT
 
 LABEL = "com.paperworkbench.backend"
 ENV_KEYS = ("PWB_DATA_DIR", "PWB_HOST", "PWB_PORT", "PWB_TOKEN", "PWB_TZ", "PWB_CLAUDE_BIN", "PWB_CODEX_BIN",
-            "S2_API_KEY", "DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
+            "S2_API_KEY", "OPENALEX_API_KEY", "OPENALEX_MAILTO", "DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
 
 
 def _env(settings):

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "follows",
+  "updatedAt": "2026-10-27T15:39:49+08:00",
+  "people": [
+    {
+      "key": "A0000000001",
+      "name": "Example Advisor",
+      "openalexId": "A0000000001",
+      "institution": "I0000000003",
+      "institutionName": "（示例）某大学",
+      "followedAt": "2026-10-27T15:39:49+08:00"
+    }
+  ]
+}

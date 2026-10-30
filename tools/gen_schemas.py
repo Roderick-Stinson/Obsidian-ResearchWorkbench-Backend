@@ -31,7 +31,7 @@ LINE_ID = {"type": "string", "pattern": r"^line-[a-z0-9-]+$"}
 LLM_ENGINES = ["claude-code", "codex", "deepseek"]
 BASIS = obj({"ownPapers": INT, "watchedPapers": INT, "relevantPapers": INT})
 CLAIM_TARGET = obj({"kind": enum("paper", "reproGroup", "experimentNote"), "id": TEXT})
-STEP_KEYS = ["fetch", "version-check", "notes", "classify", "skim", "recommend", "pick", "new-accepted", "deep-read", "results", "map",
+STEP_KEYS = ["fetch", "version-check", "affiliations", "notes", "classify", "skim", "recommend", "pick", "new-accepted", "deep-read", "results", "map",
              "must-read", "classics", "interests", "research-lines", "hotspots", "report", "push"]
 
 PAPER_USER = obj({"paperId": PID, "rating": {"type": "integer", "minimum": 0, "maximum": 5}, "flags": FLAGS,
@@ -92,6 +92,7 @@ TASK_TYPES = {
     "rebuild-interests": {"type": "object", "maxProperties": 0},
     "run-daily": {"type": "object", "maxProperties": 0},
     "retry-step": obj({"runId": TEXT, "step": enum(*STEP_KEYS)}),
+    "rebuild-affiliations": {"type": "object", "properties": {"refresh": BOOL, "readPdf": BOOL}, "additionalProperties": False},
     "ingest-paper": obj({"url": URL, "watch": BOOL}),
     "claim-run": obj({"runId": TEXT, "target": CLAIM_TARGET}),
 }
@@ -108,7 +109,8 @@ PAPER_SUMMARY = obj({"id": PID, "title": TEXT, "titleZh": nullable(STR), "firstA
                      "venue": STR, "publicationStatus": enum("已发表", "已录用", "投稿中", "预印本", "待核实"),
                      "hasPdf": BOOL, "citations": CITATIONS, "summary": STR,
                      "urls": obj({"source": nullable(URL), "pdf": nullable(URL), "code": nullable(URL)}), "topics": arr(TEXT),
-                     "libraryRelevance": nullable(enum("core", "related")), "user": USER})
+                     "libraryRelevance": nullable(enum("core", "related")), "user": USER, "institutions": arr(TEXT)},
+                    optional=("institutions",))
 BRIEF_PAPER = obj({"id": PID, "title": TEXT, "summary": STR, "publishedAt": nullable(DATE), "url": URL}, optional=("url",))
 CLASSIC_EVIDENCE = obj({"libraryCitations": nullable(INT), "citations": nullable(INT), "baselineCount": nullable(INT),
                         "githubStars": nullable(INT), "codeUrl": nullable(URL)})
@@ -135,6 +137,7 @@ REC_SETTINGS = {
     "pick": {"max": rng(0, 30), "weights": closed({k: WEIGHT for k in ("relevance", "quality", "hf", "code")})},
     "weekly": {"newAccepted": BOOL, "map": BOOL, "classics": BOOL},
     "library": {"autoAdd": arr(CATS, uniqueItems=True)},
+    "authors": {"daily": BOOL, "readPdf": BOOL, "maxPerDay": rng(0, 1000), "followRecommend": BOOL},
     "notes": {"sections": closed({k: TEXT for k in ("relation", "ideas", "follow")}), "screening": BOOL, "asSeeds": BOOL,
               "seedStatuses": arr(TEXT, uniqueItems=True), "seedMinRating": rng(0, 5), "followToQueue": BOOL, "candidates": BOOL},
 }
@@ -176,8 +179,9 @@ responses = {
             "codeUrl": nullable(URL), "hfUpvotes": INT, "citations": CITATIONS,
             "quality": obj({"score": SCORE10, "rationale": STR}),
             "category": enum("core", "adjacent", "trending"), "reason": TEXT,
-            "matchedKeywords": arr(KW_REF), "score": SCORE1, "picked": BOOL, "user": USER, "sources": arr(TEXT)},
-            optional=("sources",)))}), True),
+            "matchedKeywords": arr(KW_REF), "score": SCORE1, "picked": BOOL, "user": USER, "sources": arr(TEXT),
+            "institutions": arr(TEXT)},
+            optional=("sources", "institutions")))}), True),
     "paper-list": ("论文列表", obj({"items": arr(PAPER_SUMMARY), "nextCursor": nullable(STR), "total": INT,
                                  "facets": obj({k: arr(obj({"label": TEXT, "count": INT})) for k in ("topic", "venue", "year", "status", "relevance")})},
                                 optional=("facets",)), False),
@@ -193,8 +197,20 @@ responses = {
         "summary": STR, "matchedKeywords": arr(KW_REF), "hasDeepRead": BOOL,
         "addedAt": DT, "updatedAt": DT, "user": USER,
         "topics": arr(TEXT), "libraryRelevance": nullable(enum("core", "related")), "libraryReason": STR, "abstract": STR,
-        "userEdited": arr(TEXT)},
-        optional=("topics", "libraryRelevance", "libraryReason", "abstract", "userEdited")), False),
+        "userEdited": arr(TEXT),
+        "authorsDetail": arr(obj({"name": TEXT, "personKey": TEXT, "corresponding": nullable(BOOL), "affiliations": arr(obj({
+            "key": TEXT, "name": TEXT, "nameZh": nullable(STR), "parent": nullable(STR), "unit": nullable(STR)}))})),
+        "affiliations": obj({"sources": arr(enum("openalex", "pdf")), "updatedAt": DT, "pdfTried": BOOL, "openalexTried": BOOL}, optional=("pdfTried", "openalexTried"))},
+        optional=("topics", "libraryRelevance", "libraryReason", "abstract", "userEdited", "authorsDetail", "affiliations")), False),
+    "teams": ("团队（按机构聚合论文库）", obj({
+        "items": arr(obj({"key": TEXT, "name": TEXT, "nameZh": nullable(STR), "country": nullable(STR), "paperCount": INT,
+                          "score": NUM, "latestYear": nullable(INT), "keywords": arr(obj({"label": TEXT, "count": INT})), "units": arr(TEXT),
+                          "people": arr(obj({"key": TEXT, "name": TEXT, "openalexId": nullable(STR), "paperCount": INT,
+                                             "correspondingCount": INT, "lastAuthorCount": INT, "followed": BOOL})),
+                          "papers": PREFS})),
+        "total": INT, "coverage": obj({"papers": INT, "withAffiliations": INT})}), False),
+    "follows": ("关注的人", obj({"people": arr(obj({"key": TEXT, "name": TEXT, "openalexId": nullable(STR), "institution": nullable(STR),
+                                                   "institutionName": nullable(STR), "followedAt": DT})), "updatedAt": nullable(DT)}), False),
     "paper-topics": ("论文库里的方向及篇数", obj({"items": arr(obj({"label": TEXT, "count": INT}))}), False),
     "deep-read": ("AI 精读", obj({"paperId": PID, "markdown": TEXT, "sources": PREFS}), True),
     "resolve-result": ("论文 ID 解析结果", obj({
@@ -319,6 +335,7 @@ bodies = {
     "interests-extraction": ("一次关键词整理结果", obj({"overview": TEXT, "basis": BASIS,
                                                     "domains": arr(extraction_node(1), minItems=1)})),
     "llm-settings-put": ("切换大模型引擎", closed({"engine": enum(*LLM_ENGINES), "model": nullable(STR)}, optional=("model",))),
+    "follow-put": ("关注一个人", closed({"name": TEXT, "openalexId": nullable(STR), "institution": nullable(STR)}, optional=("openalexId", "institution"))),
     "notes-put": ("同步阅读笔记（整体替换）", closed({"notes": arr(closed({
         "paperId": TEXT, "path": TEXT, "title": TEXT, "status": nullable(STR), "rating": nullable(rng(0, 5)), "mtime": INT,
         "sections": arr(closed({"heading": TEXT, "level": rng(1, 6), "text": STR}, optional=()), maxItems=200)},

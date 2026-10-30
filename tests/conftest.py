@@ -18,6 +18,16 @@ def assert_contract(body, kind=None):
     return body
 
 
+@pytest.fixture(autouse=True)
+def no_openalex(monkeypatch):
+    """测试里不联网查 OpenAlex；要用的测试自己换成假的。"""
+    from pwb import authors
+
+    def offline(path, params):
+        raise RuntimeError("测试里不联网")
+    monkeypatch.setattr(authors, "_oa", offline)
+
+
 @pytest.fixture
 def settings(tmp_path):
     return Settings(data_dir=tmp_path / "data", token="", start_worker=False)

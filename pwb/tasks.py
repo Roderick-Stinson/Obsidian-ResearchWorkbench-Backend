@@ -91,7 +91,14 @@ def retry_step(store, params, progress):
     return daily.run(store, llm.get_config(store), progress, only=params["step"], date=run["date"])
 
 
-HANDLERS = {"claim-run": claim_run, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map,
+def rebuild_affiliations(store, params, progress):
+    """整理作者机构：OpenAlex 查机构、大模型读 PDF 第一页认通讯作者（全库，或 refresh 时重新整理已整理过的）。"""
+    from . import authors, llm
+    msg, _ = authors.run(store, llm.get_config(store), progress, refresh=params.get("refresh", False), read_pdf=params.get("readPdf", True))
+    return msg, [{"kind": "data", "path": "/teams"}]
+
+
+HANDLERS = {"claim-run": claim_run, "rebuild-affiliations": rebuild_affiliations, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map,
             "run-daily": run_daily, "retry-step": retry_step}
 
 

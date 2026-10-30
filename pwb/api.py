@@ -12,7 +12,7 @@ from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import __version__, contract, daily, errors, interests, jobs, llm, migrate, notes, pdfmeta, pdfs
+from . import __version__, authors, contract, daily, errors, interests, jobs, llm, migrate, notes, pdfmeta, pdfs
 from .errors import invalid, not_found
 from .store import Store
 from .tasks import HANDLERS, Worker
@@ -80,6 +80,14 @@ def create_app(settings):
         if body is None:
             raise not_found("还没生成：{}{}".format(kind, " " + key if key else ""))
         return body
+
+    def paper_body(pid):
+        """论文详情：原始的 authorships 换成带机构名的 authorsDetail（约定 5.19）。"""
+        paper = store.get_paper(pid)
+        ships = paper.pop("authorships", None)
+        if ships is not None:
+            paper["authorsDetail"] = authors.detail({"authorships": ships}, store.get_kv("institutions") or {})
+        return paper
 
     def require_paper(paper_id):
         # 每日推荐里的论文还不在论文表里：你打开、标记它时才写进去（不显示在论文库，除非标了相关等）。
@@ -210,7 +218,7 @@ def create_app(settings):
         if not title and not url:
             raise invalid("标题和链接至少填一个")
         pid, created = add_paper(url, title, {k: body[k] for k in ("own", "watched") if body.get(k)})
-        return out("paper", store.get_paper(pid), status=201 if created else 200)
+        return out("paper", paper_body(pid), status=201 if created else 200)
 
     @r.patch("/papers/{paper_id}")
     async def patch_paper(paper_id: str, request: Request):
@@ -221,7 +229,7 @@ def create_app(settings):
         fixes = {k: (v.strip() if isinstance(v, str) else v) for k, v in body.items()}
         fixes["userEdited"] = sorted(set(paper.get("userEdited") or []) | set(body))
         store.upsert_paper({**paper, **fixes}, paper["aliases"])
-        return out("paper", store.get_paper(paper["id"]))
+        return out("paper", paper_body(paper["id"]))
 
     @r.put("/papers/{paper_id}/pdf")
     async def upload_pdf(paper_id: str, request: Request):
@@ -245,7 +253,7 @@ def create_app(settings):
                 title = None
             if title:
                 store.upsert_paper({**paper, "title": title}, paper["aliases"])
-        return out("paper", store.get_paper(pid))
+        return out("paper", paper_body(pid))
 
     @r.post("/papers/resolve")
     async def resolve(request: Request):
@@ -254,7 +262,7 @@ def create_app(settings):
 
     @r.get("/papers/{paper_id}")
     def paper(paper_id: str):
-        return out("paper", store.get_paper(require_paper(paper_id)))
+        return out("paper", paper_body(require_paper(paper_id)))
 
     @r.get("/papers/{paper_id}/pdf")
     def paper_pdf(paper_id: str):
@@ -338,6 +346,27 @@ def create_app(settings):
     async def put_notes(request: Request):
         body = await read_body(request, "notes-put")
         return out("notes", notes.sync(store, body["notes"], ensure_from_url, daily.get_settings(store)["notes"]))
+
+    # ---------- 作者机构与团队 ----------
+
+    @r.get("/teams")
+    def get_teams(q: str = "", limit: int = Query(60, ge=1, le=500)):
+        return out("teams", authors.teams(store, q.strip(), limit))
+
+    @r.get("/me/follows")
+    def get_follows():
+        return out("follows", authors.follows_body(store))
+
+    @r.put("/me/follows/{person_key}")
+    async def put_follow(person_key: str, request: Request):
+        body = await read_body(request, "follow-put")
+        authors.follow(store, person_key, body)
+        return out("follows", authors.follows_body(store))
+
+    @r.delete("/me/follows/{person_key}")
+    def delete_follow(person_key: str):
+        authors.unfollow(store, person_key)
+        return out("follows", authors.follows_body(store))
 
     # ---------- 研究兴趣 ----------
 

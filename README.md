@@ -4,7 +4,7 @@
 
 Obsidian 论文面板的后端服务。面板（前端）在另一个仓库：[Obsidian-ResearchWorkbench-Frontend](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)。接口按 `contract/数据格式约定.md` 实现；约定的源头在面板仓库的 `论文工作台/后端约定/`，这里的 `contract/` 是同步过来的副本。
 
-已经能用的：每日推荐（arXiv + Hugging Face 每日论文 → 初筛 → 核心 / 邻近 / 热点三类 → 速读 → 精选和简报，每周新中稿入库）、论文库（领域检索入库、DBLP 核实中稿、批量下载公开 PDF）、我的标记与阅读队列、阅读笔记（面板同步过来，推荐时参考）、我的研究领域（关键词树的填写与大模型整理）、经典与必读、领域发展史（含按论文流分开的热点演变）。还没生成的数据接口返回 404，还没实现的后台任务（精读、周报等）会以“尚未实现”失败。
+已经能用的：每日推荐（arXiv + Hugging Face 每日论文 → 初筛 → 核心 / 邻近 / 热点三类 → 速读 → 精选和简报，每周新中稿入库）、论文库（领域检索入库、DBLP 核实中稿、批量下载公开 PDF）、我的标记与阅读队列、阅读笔记（面板同步过来，推荐时参考）、作者机构与团队（OpenAlex + PDF 第一页认通讯作者，按机构聚合、关注的人的新论文进推荐）、我的研究领域（关键词树的填写与大模型整理）、经典与必读、领域发展史（含按论文流分开的热点演变）。还没生成的数据接口返回 404，还没实现的后台任务（精读、周报等）会以“尚未实现”失败。
 
 **不写死**：和你研究方向有关的文字（检索词、方向说明、arXiv 论文流、会议清单）都在 `data/profile.json`；每日推荐怎么跑（时间、来源开关、阈值、上限、权重）在面板“设置 → 每日推荐”；时区用 `PWB_TZ`。
 
@@ -22,6 +22,7 @@ pwb/            代码
   profile.py    读 data/profile.json（研究方向配置）
   daily.py      每日推荐流水线、推荐设置、定时器
   notes.py      阅读笔记：同步、要追的论文进队列、阅读要点和候选关键词
+  authors.py    作者机构：OpenAlex、PDF 第一页、中文机构名；团队聚合；关注的人
   survey.py     领域检索入库：Semantic Scholar 抓候选 → 大模型按标题、摘要筛选 → 写进论文库
   pdfmeta.py    从 PDF 第一页读标题
   dblp.py       用 DBLP 整库核实“待核实”论文是否中稿
@@ -130,6 +131,8 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 | `PWB_TOKEN` | 空 | 设置后所有接口（`/health` 除外）都要带 `Authorization: Bearer <token>` |
 | `PWB_TZ` | 系统时区 | 时区（IANA 名字，如 `Asia/Shanghai`、`America/New_York`）：每日推荐的运行时间、“今天”是哪天都按它算，面板也跟着它显示时间 |
 | `S2_API_KEY` | 空 | Semantic Scholar 的 API key（免费申请），有了检索、取引用关系快很多 |
+| `OPENALEX_API_KEY` | 空 | OpenAlex 的 API key（免费申请：https://help.openalex.org/api/authentication/ ），也可以写进 `data/secrets.json` 的 `openalexApiKey`。没有 key 时同一个 IP 每天只有很少的共享免费额度，整理作者机构会很慢 |
+| `OPENALEX_MAILTO` | 空 | 你的邮箱；查 OpenAlex 时带上 |
 | `PWB_CLAUDE_BIN` | 自动查找 | `claude` 命令的路径（PATH 和 `~/.local/bin` 里找不到时设置） |
 | `PWB_CODEX_BIN` | 自动查找 | `codex` 命令的路径 |
 | `DEEPSEEK_API_KEY` | 空 | DeepSeek API key；也可以写进 `data/secrets.json`：`{"deepseekApiKey": "sk-..."}` |
@@ -188,7 +191,7 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 
 ```bash
 .venv/bin/python -m pwb daily                  # 跑一次（和面板“立刻刷新今天的推荐”一样）
-.venv/bin/python -m pwb daily --step skim      # 只跑某一步：fetch / version-check / notes / classify / recommend / skim / pick / new-accepted / map / classics
+.venv/bin/python -m pwb daily --step skim      # 只跑某一步：fetch / version-check / affiliations / notes / classify / recommend / skim / pick / new-accepted / map / classics
 ```
 
 流程（每篇候选论文做到哪一步记在 `daily_candidates` 表里，中断后重跑会接着做）：
@@ -203,6 +206,12 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 8. **每周**（设置里的那天）：按领域检索的检索词和会议清单查新中稿，筛选通过的直接入库；更新领域发展史与热点。
 
 推荐出来的论文不进论文库，你标了“相关”才进（设置里可以让某几类直接进）。全文速读用本机 Claude Code 时每篇约 1 分钟，几十篇要半小时以上，所以放在凌晨。
+
+### 作者机构与团队
+
+每篇论文记下每位作者的机构：先按标题查 OpenAlex（免费，带机构编号和上级机构），再让大模型读 PDF 第一页，认出通讯作者、补上 OpenAlex 没有的机构和院系 / 实验室（读了 PDF 的以 PDF 为准：OpenAlex 有时把全部机构挂到每位作者头上）。机构的中文名由大模型翻译一次存下来。每日流水线的“补作者机构”一步每天补新进论文库的（默认 60 篇）；全库一次补完用面板“团队”页的“整理作者机构”（任务 `rebuild-affiliations`，`readPdf: false` 只查 OpenAlex，几分钟；读 PDF 的部分以后每天补）。OpenAlex 现在要 API key（免费申请，见上面“配置”里的 `OPENALEX_API_KEY`）：没有 key 时整个 IP 每天只有很少的共享额度，用完了这次就不再往下查，没查到的论文留到下次（每天 UTC 0 点重置）。
+
+“团队”页按上级机构聚合论文库，越相关的论文权重越高；每个机构里按当通讯作者 / 末位作者的次数列出人，你挑要关注的。关注的人的新论文进每日推荐（邻近类）：按 OpenAlex 作者编号取他们的新论文，每天的新论文里同名作者也算（可能撞名）。
 
 ### 阅读笔记
 

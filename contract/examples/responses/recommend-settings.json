@@ -73,6 +73,12 @@
     "followToQueue": true,
     "candidates": true
   },
+  "authors": {
+    "daily": true,
+    "readPdf": true,
+    "maxPerDay": 60,
+    "followRecommend": true
+  },
   "updatedAt": null,
   "streams": [
     {

@@ -79,7 +79,7 @@ write(R + "recommendations-day.json", {**resp("recommendations-day"), "date": "2
      "quality": {"score": 8.0, "rationale": "设计期、运行期、事后归因三阶段都有实验"},
      "category": "core", "reason": "命中关键词“优化过程的可解释性”“节点级归因”",
      "matchedKeywords": [{"nodeId": "kw-opt-explain", "label": "优化过程的可解释性"}],
-     "score": 0.91, "picked": True, "user": user("arxiv-2610.17613"), "sources": ["智能体", "Hugging Face"]},
+     "score": 0.91, "picked": True, "user": user("arxiv-2610.17613"), "sources": ["智能体", "Hugging Face"], "institutions": ["（示例）某大学"]},
     {"id": "arxiv-2610.05284", "titleZh": "DAGO 用上下文老虎机引导的多父代工作流融合将六项基准宏平均分提升至 81.7",
      "titleEn": "Fusion is the New Mutation: Bandit-Guided Evolution on Workflow Graphs",
      "summary": "将多父代工作流融合建模为上下文老虎机臂选择问题，在相同验证预算下超越 AFlow。",
@@ -108,7 +108,13 @@ write(R + "paper.json", {**resp("paper", False), "id": "openreview-imcyVlzpXh", 
     "summary": "把多智能体架构搜索变成在智能体超网上按查询采样子架构。",
     "matchedKeywords": [{"nodeId": "kw-arch-search", "label": "多智能体架构搜索"}], "hasDeepRead": False,
     "addedAt": "2026-10-27T09:45:56+00:00", "updatedAt": "2026-10-27T09:45:56+00:00",
-    "user": user("openreview-imcyVlzpXh", watched=True, relevance="相关", discussionStatus="待讨论", updatedAt=GEN)})
+    "user": user("openreview-imcyVlzpXh", watched=True, relevance="相关", discussionStatus="待讨论", updatedAt=GEN),
+    "authorsDetail": [
+        {"name": "Guibin Zhang", "personKey": "n-guibin-zhang", "corresponding": False, "affiliations": [
+            {"key": "x-exampleuniversity", "name": "Example University", "nameZh": "（示例）某大学", "parent": None, "unit": "Department of Computer Science"}]},
+        {"name": "Example Advisor", "personKey": "A0000000001", "corresponding": True, "affiliations": [
+            {"key": "I0000000002", "name": "Example Lab of Example University", "nameZh": "（示例）某大学某实验室", "parent": "（示例）某大学", "unit": None}]}],
+    "affiliations": {"sources": ["openalex", "pdf"], "updatedAt": GEN}})
 write(R + "paper-list.json", {**resp("paper-list", False), "items": [
     {"id": "openreview-imcyVlzpXh", "title": "Multi-agent Architecture Search via Agentic Supernet",
      "titleZh": "MaAS：基于智能体超网的多智能体架构搜索", "firstAuthor": "Guibin Zhang", "year": 2025, "venue": "ICML 2025",
@@ -153,6 +159,15 @@ write(R + "interests.json", {**resp("interests"), "overview": "（示例）研�
                     "reason": "你在两篇笔记里都想追技能能否跨任务复用",
                     "growth": {"paperCount": 2, "windowDays": 0, "changePct": 0},
                     "examples": [ref("arxiv-2502.04180", "Multi-agent Architecture Search via Agentic Supernet")], "source": "notes"}]})
+write(R + "teams.json", {**resp("teams", False), "total": 1, "coverage": {"papers": 989, "withAffiliations": 812},
+    "items": [{"key": "I0000000003", "name": "Example University", "nameZh": "（示例）某大学", "country": "CN", "paperCount": 12, "score": 21.5,
+               "latestYear": 2026, "keywords": [{"label": "多智能体架构搜索", "count": 7}], "units": ["Department of Computer Science"],
+               "people": [{"key": "A0000000001", "name": "Example Advisor", "openalexId": "A0000000001", "paperCount": 9,
+                           "correspondingCount": 6, "lastAuthorCount": 8, "followed": True}],
+               "papers": [ref("openreview-imcyVlzpXh", "MaAS：基于智能体超网的多智能体架构搜索")]}]})
+write(R + "follows.json", {**resp("follows", False), "updatedAt": GEN, "people": [
+    {"key": "A0000000001", "name": "Example Advisor", "openalexId": "A0000000001", "institution": "I0000000003",
+     "institutionName": "（示例）某大学", "followedAt": GEN}]})
 write(R + "notes.json", {**resp("notes", False), "updatedAt": GEN,
     "items": [{"paperId": "arxiv-2502.04180", "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
                "title": "MaAS 用超网搜索多智能体架构", "status": "精读", "rating": 5, "mtime": 1761700000000,
@@ -268,6 +283,7 @@ write(B + "interests-extraction.json", {"overview": "（示例）关注多智能
         {"label": "多智能体架构搜索", "summary": "示例二级关键词", "evidence": [ev_maas], "children": [
             {"label": "查询自适应的超网采样", "summary": "示例三级关键词", "evidence": [ev_maas]}]}]}]})
 write(B + "llm-settings-put.json", {"engine": "deepseek", "model": "deepseek-reasoner"})
+write(B + "follow-put.json", {"name": "Example Advisor", "openalexId": "A0000000001", "institution": "I0000000003"})
 write(B + "notes-put.json", {"notes": [{"paperId": "arxiv-2502.04180", "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
     "title": "MaAS 用超网搜索多智能体架构", "status": "精读", "rating": 5, "mtime": 1761700000000,
     "sections": [{"heading": "和我的研究的关系", "level": 2, "text": "它的超网只按任务采样，我想按查询采样。"},

@@ -172,6 +172,12 @@
                 "items": {
                   "$ref": "common.schema.json#/$defs/Text"
                 }
+              },
+              "institutions": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
               }
             },
             "required": [

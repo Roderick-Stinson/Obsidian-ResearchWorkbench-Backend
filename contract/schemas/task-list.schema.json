@@ -34,6 +34,7 @@
                   "rebuild-interests",
                   "run-daily",
                   "retry-step",
+                  "rebuild-affiliations",
                   "ingest-paper",
                   "claim-run"
                 ]
@@ -272,6 +273,7 @@
                           "enum": [
                             "fetch",
                             "version-check",
+                            "affiliations",
                             "notes",
                             "classify",
                             "skim",
@@ -295,6 +297,31 @@
                         "runId",
                         "step"
                       ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "rebuild-affiliations"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "params": {
+                      "type": "object",
+                      "properties": {
+                        "refresh": {
+                          "type": "boolean"
+                        },
+                        "readPdf": {
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false
                     }
                   }
                 }
