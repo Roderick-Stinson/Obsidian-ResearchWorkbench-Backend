@@ -26,6 +26,11 @@ def no_openalex(monkeypatch):
     def offline(path, params):
         raise RuntimeError("测试里不联网")
     monkeypatch.setattr(authors, "_oa", offline)
+    from pwb import summarize
+
+    def no_arxiv(arxiv_id):
+        raise RuntimeError("测试里不联网")
+    monkeypatch.setattr(summarize, "arxiv_meta", no_arxiv)
 
 
 @pytest.fixture

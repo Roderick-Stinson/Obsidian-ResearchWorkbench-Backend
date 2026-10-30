@@ -31,7 +31,7 @@ LINE_ID = {"type": "string", "pattern": r"^line-[a-z0-9-]+$"}
 LLM_ENGINES = ["claude-code", "codex", "deepseek"]
 BASIS = obj({"ownPapers": INT, "watchedPapers": INT, "relevantPapers": INT})
 CLAIM_TARGET = obj({"kind": enum("paper", "reproGroup", "experimentNote"), "id": TEXT})
-STEP_KEYS = ["fetch", "version-check", "affiliations", "notes", "classify", "skim", "recommend", "pick", "new-accepted", "deep-read", "results", "map",
+STEP_KEYS = ["fetch", "version-check", "affiliations", "summaries", "notes", "classify", "skim", "recommend", "pick", "new-accepted", "deep-read", "results", "map",
              "must-read", "classics", "interests", "research-lines", "hotspots", "report", "push"]
 
 PAPER_USER = obj({"paperId": PID, "rating": {"type": "integer", "minimum": 0, "maximum": 5}, "flags": FLAGS,

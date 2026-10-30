@@ -191,7 +191,7 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 
 ```bash
 .venv/bin/python -m pwb daily                  # 跑一次（和面板“立刻刷新今天的推荐”一样）
-.venv/bin/python -m pwb daily --step skim      # 只跑某一步：fetch / version-check / affiliations / notes / classify / recommend / skim / pick / new-accepted / map / classics
+.venv/bin/python -m pwb daily --step skim      # 只跑某一步：fetch / version-check / affiliations / summaries / notes / classify / recommend / skim / pick / new-accepted / map / classics
 ```
 
 流程（每篇候选论文做到哪一步记在 `daily_candidates` 表里，中断后重跑会接着做）：

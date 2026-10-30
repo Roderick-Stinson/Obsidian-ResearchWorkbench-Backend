@@ -274,6 +274,7 @@
                             "fetch",
                             "version-check",
                             "affiliations",
+                            "summaries",
                             "notes",
                             "classify",
                             "skim",

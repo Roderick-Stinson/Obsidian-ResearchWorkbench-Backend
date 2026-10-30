@@ -22,7 +22,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from . import authors, hotspots, interests, llm, notes, profile, survey
+from . import authors, hotspots, interests, llm, notes, profile, summarize, survey
 from .pdfs import _arxiv_pdf, _get
 from .util import TZ, dumps, now, today
 
@@ -48,7 +48,7 @@ DEFAULTS = {
 SECTIONS = list(DEFAULTS)
 CATEGORIES = ("core", "adjacent", "trending")
 CATEGORY_NAME = {"core": "核心", "adjacent": "邻近", "trending": "热点"}
-STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("affiliations", "补作者机构"), ("notes", "整理阅读笔记"), ("classify", "按研究兴趣判定相关性"),
+STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("affiliations", "补作者机构"), ("summaries", "补中文标题和总结"), ("notes", "整理阅读笔记"), ("classify", "按研究兴趣判定相关性"),
          ("recommend", "分出邻近 / 热点"), ("skim", "速读"), ("pick", "挑选精选、写简报"),
          ("new-accepted", "每周：新中稿入库"), ("map", "每周：更新领域发展史与热点"), ("classics", "每周：更新经典与必读"),
          ("push", "推送")]
@@ -837,9 +837,9 @@ def run(store, config, progress, only=None, date=None):
                 plan.append((key, key, None))
         else:
             plan.append((key, key, None))
-    funcs = {"fetch": step_fetch, "version-check": step_version_check, "affiliations": step_affiliations, "notes": notes.step_notes, "classify": step_classify, "recommend": step_recommend,
+    funcs = {"fetch": step_fetch, "version-check": step_version_check, "affiliations": step_affiliations, "summaries": summarize.step_summaries, "notes": notes.step_notes, "classify": step_classify, "recommend": step_recommend,
              "skim": step_skim, "pick": step_pick, "new-accepted": step_new_accepted, "map": step_map, "classics": step_classics}
-    needs_llm = {"affiliations", "notes", "classify", "skim", "pick", "new-accepted", "map", "classics"}
+    needs_llm = {"affiliations", "summaries", "notes", "classify", "skim", "pick", "new-accepted", "map", "classics"}
     messages = []
     for n, (key, func, skip) in enumerate(plan, 1):
         step = next(s for s in run_["steps"] if s["key"] == key)
