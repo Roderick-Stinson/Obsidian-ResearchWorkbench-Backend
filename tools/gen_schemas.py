@@ -24,7 +24,7 @@ SCORE10 = {"type": "number", "minimum": 0, "maximum": 10}
 SCORE1 = {"type": "number", "minimum": 0, "maximum": 1}
 CITATIONS = obj({"count": nullable(INT), "updatedAt": nullable(DT)})
 KW_REF = obj({"nodeId": TEXT, "label": TEXT})
-FLAGS = arr(enum("已读", "收藏", "复现"), uniqueItems=True)
+FLAGS = arr(enum("已读", "收藏", "复现", "跳过"), uniqueItems=True)
 RELEVANCE = nullable(enum("相关", "不相关"))
 TASK_ID = {"type": "string", "pattern": r"^task-\d{8}T\d{6}-[0-9a-f]{6}$"}
 LINE_ID = {"type": "string", "pattern": r"^line-[a-z0-9-]+$"}
@@ -135,13 +135,23 @@ REC_SETTINGS = {
     "adjacent": {"seeds": arr(enum("own", "watched", "relevant", "library"), uniqueItems=True), "lookbackDays": rng(1, 30)},
     "trending": {"minHfUpvotes": rng(0, 10000), "useHotspots": BOOL, "hotspotMinHfUpvotes": rng(0, 10000), "maxPerDay": rng(0, 500)},
     "skim": {"fullText": arr(CATS, uniqueItems=True), "maxFullTextPerDay": rng(0, 500)},
-    "pick": {"max": rng(0, 30), "weights": closed({k: WEIGHT for k in ("relevance", "quality", "hf", "code")})},
+    "pick": {"max": rng(0, 30), "outsideMax": rng(0, 30), "weights": closed({k: WEIGHT for k in ("relevance", "quality", "hf", "code")})},
     "weekly": {"newAccepted": BOOL, "map": BOOL, "classics": BOOL},
     "library": {"autoAdd": arr(CATS, uniqueItems=True)},
+    "backlog": {"days": rng(1, 60), "max": rng(0, 50)},
     "authors": {"daily": BOOL, "readPdf": BOOL, "maxPerDay": rng(0, 1000), "followRecommend": BOOL},
     "notes": {"sections": closed({k: TEXT for k in ("relation", "ideas", "follow")}), "screening": BOOL, "asSeeds": BOOL,
               "seedStatuses": arr(TEXT, uniqueItems=True), "seedMinRating": rng(0, 5), "followToQueue": BOOL, "candidates": BOOL},
 }
+
+REC_PAPER = obj({
+    "id": PID, "titleZh": TEXT, "titleEn": TEXT, "summary": TEXT, "publishedAt": DATE, "url": URL,
+    "codeUrl": nullable(URL), "hfUpvotes": INT, "citations": CITATIONS,
+    "quality": obj({"score": SCORE10, "rationale": STR}),
+    "category": enum("core", "adjacent", "trending"), "reason": TEXT,
+    "matchedKeywords": arr(KW_REF), "score": SCORE1, "picked": BOOL, "user": USER, "sources": arr(TEXT),
+    "institutions": arr(TEXT), "domain": nullable(obj({"id": TEXT, "label": TEXT}))},
+    optional=("sources", "institutions", "domain"))
 
 # kind -> (title, body, generated)
 responses = {
@@ -174,15 +184,10 @@ responses = {
     "recommendations-index": ("往期推荐", obj({
         "issues": arr(obj({"date": DATE, "counts": COUNTS, "pickedCount": INT}))}), True),
     "recommendations-day": ("单日推荐", obj({
-        "date": DATE, "counts": COUNTS,
-        "papers": arr(obj({
-            "id": PID, "titleZh": TEXT, "titleEn": TEXT, "summary": TEXT, "publishedAt": DATE, "url": URL,
-            "codeUrl": nullable(URL), "hfUpvotes": INT, "citations": CITATIONS,
-            "quality": obj({"score": SCORE10, "rationale": STR}),
-            "category": enum("core", "adjacent", "trending"), "reason": TEXT,
-            "matchedKeywords": arr(KW_REF), "score": SCORE1, "picked": BOOL, "user": USER, "sources": arr(TEXT),
-            "institutions": arr(TEXT)},
-            optional=("sources", "institutions")))}), True),
+        "date": DATE, "counts": COUNTS, "papers": arr(REC_PAPER),
+        "domains": arr(obj({"id": TEXT, "label": TEXT, "count": INT}))}, optional=("domains",)), True),
+    "recommendations-backlog": ("之前没看的精选", obj({
+        "days": INT, "max": INT, "total": INT, "papers": arr({"allOf": [REC_PAPER, obj({"date": DATE})]})}), False),
     "paper-list": ("论文列表", obj({"items": arr(PAPER_SUMMARY), "nextCursor": nullable(STR), "total": INT,
                                  "facets": obj({k: arr(obj({"label": TEXT, "count": INT})) for k in ("topic", "venue", "year", "status", "relevance")})},
                                 optional=("facets",)), False),

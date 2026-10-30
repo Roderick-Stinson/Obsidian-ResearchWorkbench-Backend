@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/recommendations-backlog.schema.json",
+  "title": "之前没看的精选",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "recommendations-backlog"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "days": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "papers": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "common.schema.json#/$defs/PaperId"
+                  },
+                  "titleZh": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "titleEn": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "summary": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "publishedAt": {
+                    "$ref": "common.schema.json#/$defs/Date"
+                  },
+                  "url": {
+                    "$ref": "common.schema.json#/$defs/Url"
+                  },
+                  "codeUrl": {
+                    "anyOf": [
+                      {
+                        "$ref": "common.schema.json#/$defs/Url"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "hfUpvotes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "citations": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "updatedAt": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/DateTime"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "updatedAt"
+                    ]
+                  },
+                  "quality": {
+                    "type": "object",
+                    "properties": {
+                      "score": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "rationale": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "score",
+                      "rationale"
+                    ]
+                  },
+                  "category": {
+                    "enum": [
+                      "core",
+                      "adjacent",
+                      "trending"
+                    ]
+                  },
+                  "reason": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "matchedKeywords": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "nodeId": {
+                          "$ref": "common.schema.json#/$defs/Text"
+                        },
+                        "label": {
+                          "$ref": "common.schema.json#/$defs/Text"
+                        }
+                      },
+                      "required": [
+                        "nodeId",
+                        "label"
+                      ]
+                    }
+                  },
+                  "score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "picked": {
+                    "type": "boolean"
+                  },
+                  "user": {
+                    "$ref": "common.schema.json#/$defs/PaperUser"
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    }
+                  },
+                  "institutions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    }
+                  },
+                  "domain": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "common.schema.json#/$defs/Text"
+                          },
+                          "label": {
+                            "$ref": "common.schema.json#/$defs/Text"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "titleZh",
+                  "titleEn",
+                  "summary",
+                  "publishedAt",
+                  "url",
+                  "codeUrl",
+                  "hfUpvotes",
+                  "citations",
+                  "quality",
+                  "category",
+                  "reason",
+                  "matchedKeywords",
+                  "score",
+                  "picked",
+                  "user"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "$ref": "common.schema.json#/$defs/Date"
+                  }
+                },
+                "required": [
+                  "date"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "days",
+        "max",
+        "total",
+        "papers"
+      ]
+    }
+  ]
+}

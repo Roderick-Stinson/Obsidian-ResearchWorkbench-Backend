@@ -175,6 +175,11 @@
               "minimum": 0,
               "maximum": 30
             },
+            "outsideMax": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30
+            },
             "weights": {
               "type": "object",
               "properties": {
@@ -205,6 +210,7 @@
           },
           "required": [
             "max",
+            "outsideMax",
             "weights"
           ],
           "additionalProperties": false
@@ -246,6 +252,26 @@
           },
           "required": [
             "autoAdd"
+          ],
+          "additionalProperties": false
+        },
+        "backlog": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 50
+            }
+          },
+          "required": [
+            "days",
+            "max"
           ],
           "additionalProperties": false
         },
@@ -383,6 +409,7 @@
         "pick",
         "weekly",
         "library",
+        "backlog",
         "authors",
         "notes",
         "updatedAt",

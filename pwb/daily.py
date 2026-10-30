@@ -35,7 +35,11 @@ DEFAULTS = {
     "adjacent": {"seeds": ["own", "watched", "relevant", "library"], "lookbackDays": 7},
     "trending": {"minHfUpvotes": 10, "useHotspots": True, "hotspotMinHfUpvotes": 3, "maxPerDay": 20},
     "skim": {"fullText": ["core", "adjacent", "trending"], "maxFullTextPerDay": 50},
-    "pick": {"max": 10, "weights": {"relevance": 0.4, "quality": 0.3, "hf": 0.2, "code": 0.1}},
+    # 精选按研究领域（关键词树的一级领域）轮流挑；不属于任何领域的（多是 Hugging Face 上的热门论文）最多 outsideMax 篇。
+    "pick": {"max": 10, "outsideMax": 2, "weights": {"relevance": 0.4, "quality": 0.3, "hf": 0.2, "code": 0.1}},
+    # 之前几天的精选你没处理的（没评分、没标记、没加队列、没写笔记、没点“跳过”），在推荐页顶上再给你看：
+    # 只看最近 days 天，最多 max 篇，越新、分越高越靠前；过了 days 天就不再提醒（往期推荐里还能找到）。
+    "backlog": {"days": 14, "max": 10},
     "weekly": {"newAccepted": True, "map": True, "classics": False},
     "library": {"autoAdd": []},
     # 阅读笔记怎么参与推荐（见 notes.py）；sections 是模板里的小节名，改了模板标题要跟着改。
@@ -636,8 +640,9 @@ def _score(cand, weights):
     return round(sum(max(0.0, weights.get(k, 0)) * v for k, v in parts.items()) / total, 4)
 
 
-def _rec(store, cand, stream_names, follow_note=""):
+def _rec(store, cand, stream_names, follow_note="", domain_labels=None):
     r, d, skim = cand["result"], cand["data"], cand["result"]["skim"]
+    dom = r.get("domain")
     pid = store.resolve("arxiv-" + cand["id"]) or "arxiv-" + cand["id"]
     sources = [stream_names.get(s, s) for s in d["streams"]] + (["Hugging Face"] if d.get("hf") else [])
     return {"id": pid, "titleZh": skim["titleZh"], "titleEn": d["title"], "summary": skim["summary"] or d["abstract"][:300] or d["title"],
@@ -646,6 +651,7 @@ def _rec(store, cand, stream_names, follow_note=""):
             "quality": skim["quality"], "category": r["category"],
             "reason": (r.get("why") or r.get("reason") or CATEGORY_NAME[r["category"]]) + (follow_note if not r.get("followed") else ""),
             "institutions": skim.get("institutions") or [],
+            "domain": {"id": dom, "label": (domain_labels or {}).get(dom, dom)} if dom else None,
             "matchedKeywords": r.get("matched") or [], "score": r["score"], "picked": bool(r.get("picked")), "sources": sources}
 
 
@@ -656,6 +662,72 @@ BRIEF_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["s
                                                                             "refs": {"type": "array", "items": {"type": "integer"}}}}}}}
 
 
+DOMAIN_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["items"], "properties": {"items": {"type": "array", "items": {
+    "type": "object", "additionalProperties": False, "required": ["i", "domain"],
+    "properties": {"i": {"type": "integer"}, "domain": {"type": "string"}}}}}}
+
+
+def _domains(store):
+    """关键词树的一级领域：[(编号, 名字, 说明和下级关键词)]。"""
+    tree = store.get_kv("interests") or {}
+    return [(d["id"], d["label"], "；".join([d.get("summary") or ""] + [ch["label"] for ch in d.get("children", [])]).strip("；"))
+            for d in tree.get("domains", [])]
+
+
+def _assign_domains(store, config, cands, log):
+    """每篇推荐归到一个研究领域（result.domain，不属于任何领域为 None）：命中关键词的按关键词所在的一级领域，
+    其余交给大模型按标题和摘要判断。大模型没判成的不写，下次再判。"""
+    doms = _domains(store)
+    ids = {d[0] for d in doms}
+    top = {}  # 关键词 → 它所在的一级领域
+    for n, level, parent in interests.walk((store.get_kv("interests") or {}).get("domains", [])):
+        top[n["id"]] = n["id"] if level == 1 else top[parent["id"]]
+    need = []
+    for c in cands:
+        if "domain" in c["result"]:
+            continue
+        hit = [top[m["nodeId"]] for m in c["result"].get("matched") or [] if m["nodeId"] in top]
+        if hit or not doms:
+            c["result"]["domain"] = hit[0] if hit else None
+            _save(store, c)
+        else:
+            need.append(c)
+    if not need:
+        return
+    head = ["我的研究领域（编号：名字 —— 说明）：", *("{}：{} —— {}".format(i, n, s) for i, n, s in doms), "",
+            "下面每篇论文判断它属于我的哪个研究领域，domain 填领域编号；都不属于（只是用到了相关技术、或者完全是别的方向）填 none。"]
+    batches = [need[i:i + 40] for i in range(0, len(need), 40)]
+    jobs = [(b, SYSTEM, "\n".join(head + ["", "<论文列表>", *("### {}. {}\n{}".format(i, c["data"]["title"], (c["data"]["abstract"] or "")[:800])
+                                                              for i, c in enumerate(batch)), "</论文列表>"]), DOMAIN_SCHEMA)
+            for b, batch in enumerate(batches)]
+    log("归研究领域：{} 篇".format(len(need)))
+    results = survey._llm_parallel(store, config, jobs, 3, log)
+    for b, batch in enumerate(batches):
+        res = results.get(b)
+        if not isinstance(res, dict):
+            continue
+        for x in res.get("items", []):
+            if isinstance(x.get("i"), int) and 0 <= x["i"] < len(batch):
+                batch[x["i"]]["result"]["domain"] = x.get("domain") if x.get("domain") in ids else None
+                _save(store, batch[x["i"]])
+
+
+def _pick(cands, cfg):
+    """精选：各研究领域轮流挑分最高的，不属于任何领域的最多 outsideMax 篇，一共 max 篇。"""
+    groups = {}
+    for c in sorted(cands, key=lambda c: -c["result"]["score"]):
+        groups.setdefault(c["result"].get("domain"), []).append(c)
+    if None in groups:
+        groups[None] = groups[None][:cfg["pick"]["outsideMax"]]
+    picked = []
+    while len(picked) < cfg["pick"]["max"] and any(groups.values()):
+        # 这一轮每个领域各出一篇，按分数高低排进去
+        for c in sorted((g.pop(0) for g in groups.values() if g), key=lambda c: -c["result"]["score"]):
+            if len(picked) < cfg["pick"]["max"]:
+                picked.append(c["id"])
+    return set(picked)
+
+
 def step_pick(store, cfg, date, log, config):
     need_code = (store.get_kv("preferences") or {}).get("needCode", False)
     fresh = _rows(store, "skimmed")
@@ -664,10 +736,10 @@ def step_pick(store, cfg, date, log, config):
         c["result"]["recDate"] = date
         _save(store, c, "published")
     today_cands = [c for c in _rows(store, "published") if c["result"].get("recDate") == date]
+    _assign_domains(store, config, today_cands, log)
     if need_code:
         today_cands = [c for c in today_cands if c["result"]["skim"]["codeUrl"]]
-    ranked = sorted(today_cands, key=lambda c: -c["result"]["score"])
-    picked = {c["id"] for c in ranked[:cfg["pick"]["max"]]}
+    picked = _pick(today_cands, cfg)
     for c in today_cands:
         if bool(c["result"].get("picked")) != (c["id"] in picked):
             c["result"]["picked"] = c["id"] in picked
@@ -686,13 +758,44 @@ def step_pick(store, cfg, date, log, config):
     def follow_note(c):  # 核心 / 热点里也有你关注的人的论文：理由里提一句
         fol = _follow_hits(store, c) if cfg["authors"]["followRecommend"] else []
         return "；" + _follow_text(fol, insts) if fol else ""
-    recs = sorted((_rec(store, c, names, follow_note(c)) for c in today_cands), key=lambda p: (order[p["category"]], -p["score"]))
+    doms = _domains(store)
+    labels = {i: n for i, n, _ in doms}
+    recs = sorted((_rec(store, c, names, follow_note(c), labels) for c in today_cands), key=lambda p: (order[p["category"]], -p["score"]))
     counts = {k: sum(1 for p in recs if p["category"] == k) for k in CATEGORIES}
+    by_domain = [{"id": i, "label": n, "count": sum(1 for p in recs if (p["domain"] or {}).get("id") == i)} for i, n, _ in doms]
     store.put_doc({"schemaVersion": 1, "kind": "recommendations-day", "generatedAt": now(), "runId": "daily-" + date,
-                   "date": date, "counts": counts, "papers": [{**p, "user": store.get_user(p["id"]) if store.resolve(p["id"]) else _blank_user(p["id"])} for p in recs]})
+                   "date": date, "counts": counts, "domains": by_domain, "papers": [{**p, "user": store.get_user(p["id"]) if store.resolve(p["id"]) else _blank_user(p["id"])} for p in recs]})
     _update_index(store, date, counts, len(picked))
     _brief(store, config, date, recs, log, notes.profile_summary(store, cfg["notes"]))
     return "今天推荐 {} 篇（核心 {core}、邻近 {adjacent}、热点 {trending}），精选 {} 篇".format(len(recs), len(picked), **counts), len(recs)
+
+
+def backlog(store, cfg):
+    """之前几天（最近一期以前、backlog.days 天以内）的精选里你还没处理的：没评分、没标记（含“跳过”）、
+    没标相关 / 不相关 / 重点关注、没加阅读队列、没写笔记。越新、分越高越靠前，最多 backlog.max 篇。"""
+    days, mx = cfg["backlog"]["days"], cfg["backlog"]["max"]
+    issues = sorted((store.get_doc("recommendations-index") or {"issues": []})["issues"], key=lambda i: i["date"], reverse=True)
+    if not issues:
+        return {"days": days, "max": mx, "total": 0, "papers": []}
+    latest = datetime.fromisoformat(issues[0]["date"])
+    queue = set((store.get_kv("queue") or {}).get("paperIds", []))
+    noted = {n["paperId"] for n in store.get_notes()}
+    seen, out = set(), []
+    for issue in issues[1:]:
+        age = (latest - datetime.fromisoformat(issue["date"])).days
+        if age > days:
+            break
+        for p in (store.get_doc("recommendations-day", issue["date"]) or {}).get("papers", []):
+            pid = store.resolve(p["id"]) or p["id"]
+            if not p["picked"] or pid in seen:
+                continue
+            seen.add(pid)
+            u = store.get_user(pid)
+            if u["rating"] or u["flags"] or u["relevance"] or u["watched"] or u["own"] or pid in queue or pid in noted:
+                continue
+            out.append((p["score"] * 0.93 ** age, {**p, "id": pid, "user": u, "date": issue["date"]}))
+    out.sort(key=lambda x: -x[0])
+    return {"days": days, "max": mx, "total": len(out), "papers": [p for _, p in out[:mx]]}
 
 
 def _blank_user(pid):

@@ -122,6 +122,10 @@ def create_app(settings):
     def brief(date: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$")):
         return doc("brief", date)
 
+    @r.get("/recommendations/backlog")
+    def recommendations_backlog():
+        return out("recommendations-backlog", daily.backlog(store, daily.get_settings(store)))
+
     @r.get("/recommendations/{date}")
     def recommendations_day(date: str):
         body = doc("recommendations-day", date)

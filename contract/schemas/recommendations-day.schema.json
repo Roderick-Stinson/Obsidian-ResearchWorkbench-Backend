@@ -178,6 +178,28 @@
                 "items": {
                   "$ref": "common.schema.json#/$defs/Text"
                 }
+              },
+              "domain": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      },
+                      "label": {
+                        "$ref": "common.schema.json#/$defs/Text"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -197,6 +219,29 @@
               "score",
               "picked",
               "user"
+            ]
+          }
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "label": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "count"
             ]
           }
         }

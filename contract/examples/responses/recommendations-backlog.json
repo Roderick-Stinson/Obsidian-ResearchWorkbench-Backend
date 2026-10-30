@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "recommendations-backlog",
+  "days": 14,
+  "max": 10,
+  "total": 1,
+  "papers": [
+    {
+      "id": "arxiv-2610.17613",
+      "titleZh": "MAS-Gate 通过节点级量化统领多智能体全生命周期，将工作流编排平均表现提升至 44.70%",
+      "titleEn": "MAS-Gate: Unlocking Multi-Agent System Lifecycle via Node-Centric Quantification",
+      "summary": "提出基于节点效用与跨节点传播强度的统一量化方法 MAS-Gate，贯穿设计期编排、运行期干预与事后归因。",
+      "publishedAt": "2026-10-13",
+      "url": "https://arxiv.org/abs/2610.17613",
+      "codeUrl": null,
+      "hfUpvotes": 0,
+      "citations": {
+        "count": 0,
+        "updatedAt": "2026-10-27T01:10:00+08:00"
+      },
+      "quality": {
+        "score": 8.0,
+        "rationale": "设计期、运行期、事后归因三阶段都有实验"
+      },
+      "category": "core",
+      "reason": "命中关键词“优化过程的可解释性”“节点级归因”",
+      "matchedKeywords": [
+        {
+          "nodeId": "kw-opt-explain",
+          "label": "优化过程的可解释性"
+        }
+      ],
+      "score": 0.91,
+      "picked": true,
+      "user": {
+        "paperId": "arxiv-2610.17613",
+        "rating": 0,
+        "flags": [],
+        "relevance": null,
+        "watched": false,
+        "own": false,
+        "discussionStatus": null,
+        "updatedAt": null
+      },
+      "sources": [
+        "智能体",
+        "Hugging Face"
+      ],
+      "institutions": [
+        "（示例）某大学"
+      ],
+      "domain": {
+        "id": "kw-mas",
+        "label": "多智能体系统"
+      },
+      "date": "2026-10-27"
+    }
+  ]
+}

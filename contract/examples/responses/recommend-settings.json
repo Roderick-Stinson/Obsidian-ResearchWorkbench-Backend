@@ -42,12 +42,17 @@
   },
   "pick": {
     "max": 10,
+    "outsideMax": 2,
     "weights": {
       "relevance": 0.4,
       "quality": 0.3,
       "hf": 0.2,
       "code": 0.1
     }
+  },
+  "backlog": {
+    "days": 14,
+    "max": 10
   },
   "weekly": {
     "newAccepted": true,

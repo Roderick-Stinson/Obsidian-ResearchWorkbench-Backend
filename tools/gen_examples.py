@@ -70,7 +70,7 @@ MAAS = ref("openreview-imcyVlzpXh", "Multi-agent Architecture Search via Agentic
 write(R + "recommendations-index.json", {**resp("recommendations-index"), "issues": [
     {"date": "2026-10-27", "counts": {"core": 1, "adjacent": 1, "trending": 1}, "pickedCount": 1}]})
 write(R + "recommendations-day.json", {**resp("recommendations-day"), "date": "2026-10-27",
-    "counts": {"core": 1, "adjacent": 1, "trending": 1}, "papers": [
+    "counts": {"core": 1, "adjacent": 1, "trending": 1}, "domains": [{"id": "kw-mas", "label": "多智能体系统", "count": 1}], "papers": [
     {"id": "arxiv-2610.17613", "titleZh": "MAS-Gate 通过节点级量化统领多智能体全生命周期，将工作流编排平均表现提升至 44.70%",
      "titleEn": "MAS-Gate: Unlocking Multi-Agent System Lifecycle via Node-Centric Quantification",
      "summary": "提出基于节点效用与跨节点传播强度的统一量化方法 MAS-Gate，贯穿设计期编排、运行期干预与事后归因。",
@@ -79,7 +79,8 @@ write(R + "recommendations-day.json", {**resp("recommendations-day"), "date": "2
      "quality": {"score": 8.0, "rationale": "设计期、运行期、事后归因三阶段都有实验"},
      "category": "core", "reason": "命中关键词“优化过程的可解释性”“节点级归因”",
      "matchedKeywords": [{"nodeId": "kw-opt-explain", "label": "优化过程的可解释性"}],
-     "score": 0.91, "picked": True, "user": user("arxiv-2610.17613"), "sources": ["智能体", "Hugging Face"], "institutions": ["（示例）某大学"]},
+     "score": 0.91, "picked": True, "user": user("arxiv-2610.17613"), "sources": ["智能体", "Hugging Face"], "institutions": ["（示例）某大学"],
+     "domain": {"id": "kw-mas", "label": "多智能体系统"}},
     {"id": "arxiv-2610.05284", "titleZh": "DAGO 用上下文老虎机引导的多父代工作流融合将六项基准宏平均分提升至 81.7",
      "titleEn": "Fusion is the New Mutation: Bandit-Guided Evolution on Workflow Graphs",
      "summary": "将多父代工作流融合建模为上下文老虎机臂选择问题，在相同验证预算下超越 AFlow。",
@@ -95,6 +96,10 @@ write(R + "recommendations-day.json", {**resp("recommendations-day"), "date": "2
      "citations": {"count": None, "updatedAt": None}, "quality": {"score": 7.0, "rationale": ""},
      "category": "trending", "reason": "一级领域“多智能体系统”内近 7 天讨论量最高的论文之一",
      "matchedKeywords": [], "score": 0.58, "picked": False, "user": user("arxiv-2610.32131")}]})
+
+_day = json.loads((OUT / (R + "recommendations-day.json")).read_text(encoding="utf-8"))
+write(R + "recommendations-backlog.json", {**resp("recommendations-backlog", False), "days": 14, "max": 10, "total": 1,
+    "papers": [{**_day["papers"][0], "date": "2026-10-27"}]})
 
 write(R + "paper.json", {**resp("paper", False), "id": "openreview-imcyVlzpXh", "aliases": ["arxiv-2502.04180"],
     "title": "Multi-agent Architecture Search via Agentic Supernet", "titleZh": "MaAS：基于智能体超网的多智能体架构搜索",

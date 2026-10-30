@@ -9,6 +9,13 @@
     "adjacent": 1,
     "trending": 1
   },
+  "domains": [
+    {
+      "id": "kw-mas",
+      "label": "多智能体系统",
+      "count": 1
+    }
+  ],
   "papers": [
     {
       "id": "arxiv-2610.17613",
@@ -53,7 +60,11 @@
       ],
       "institutions": [
         "（示例）某大学"
-      ]
+      ],
+      "domain": {
+        "id": "kw-mas",
+        "label": "多智能体系统"
+      }
     },
     {
       "id": "arxiv-2610.05284",

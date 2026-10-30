@@ -69,6 +69,9 @@ def setup(store, monkeypatch, tree=True):
                 core = title.startswith("Core")
                 out.append({"i": int(i), "relevant": core, "keywords": ["kw-1", "kw-made-up"] if core else [], "reason": "理由" + i})
             return {"items": out}
+        if "items" in props and "domain" in props["items"]["items"]["properties"]:  # 归研究领域：Viral 不属于任何领域
+            lines = [l for l in prompt.split("<论文列表>")[1].splitlines() if l.startswith("### ")]
+            return {"items": [{"i": int(l[4:].split(". ", 1)[0]), "domain": "none" if "Viral" in l else "kw-1"} for l in lines]}
         if "items" in props:  # 只看摘要的速读
             n = len([l for l in prompt.split("<论文列表>")[1].splitlines() if l.startswith("### ")])
             return {"items": [{"i": i, "titleZh": "中文标题" + str(i), "summary": "速读。", "quality": 7, "rationale": "扎实",
@@ -227,3 +230,37 @@ def test_run_daily_and_retry_step_tasks(client, store, monkeypatch):
     bad = client.post(API + "/tasks", json={"type": "retry-step", "params": {"runId": "daily-1999-01-01", "step": "skim"}}).json()
     run_task(store, store.claim_next_task())
     assert client.get(API + "/tasks/" + bad["id"]).json()["status"] == "failed"
+
+
+def test_pick_balances_domains_and_caps_outside():
+    def cand(i, dom, score):
+        return {"id": str(i), "result": {"domain": dom, "score": score}}
+    cands = [cand(1, "a", 0.9), cand(2, "a", 0.8), cand(3, "a", 0.7), cand(4, "b", 0.3), cand(5, None, 0.99), cand(6, None, 0.98),
+             cand(7, None, 0.97)]
+    cfg = {"pick": {"max": 4, "outsideMax": 1}}
+    assert daily._pick(cands, cfg) == {"1", "4", "5", "2"}, "每个领域轮流出一篇；领域外的只要 1 篇"
+
+
+def test_backlog_of_unhandled_picks(client, store, monkeypatch):
+    def day(date, papers):
+        store.put_doc({"schemaVersion": 1, "kind": "recommendations-day", "generatedAt": DATE + "T01:00:00+08:00", "runId": "daily-" + date,
+                       "date": date, "counts": {"core": len(papers), "adjacent": 0, "trending": 0}, "papers": papers})
+        daily._update_index(store, date, {"core": len(papers), "adjacent": 0, "trending": 0}, len(papers))
+
+    def rec(i, score, picked=True):
+        return {"id": "arxiv-2610.0000" + str(i), "titleZh": "中文" + str(i), "titleEn": "Paper " + str(i), "summary": "s", "publishedAt": "2026-10-01",
+                "url": "https://arxiv.org/abs/2610.0000" + str(i), "codeUrl": None, "hfUpvotes": 0, "citations": {"count": None, "updatedAt": None},
+                "quality": {"score": 7, "rationale": ""}, "category": "core", "reason": "r", "matchedKeywords": [], "score": score,
+                "picked": picked, "user": daily._blank_user("arxiv-2610.0000" + str(i))}
+    day("2026-10-10", [rec(9, 0.99)])                      # 太早：超过 14 天
+    day("2026-10-27", [rec(1, 0.9), rec(2, 0.5), rec(3, 0.8, picked=False)])
+    day("2026-10-28", [rec(4, 0.6), rec(1, 0.9)])
+    day("2026-10-29", [rec(5, 0.7)])                       # 最近一期，不算积压
+    store.upsert_paper({"id": "arxiv-2610.00002", "title": "Paper 2", "authors": [], "publicationStatus": "预印本", "summary": ""})
+    store.patch_user("arxiv-2610.00002", {"flags": ["跳过"]})
+    body = assert_contract(client.get(API + "/recommendations/backlog").json(), "recommendations-backlog")
+    assert [(p["id"], p["date"]) for p in body["papers"]] == [("arxiv-2610.00001", "2026-10-28"), ("arxiv-2610.00004", "2026-10-28")], \
+        "只算精选、没处理过的；同一篇只出现一次；跳过的不算"
+    daily.put_settings(store, {"backlog": {"max": 1}})
+    body = client.get(API + "/recommendations/backlog").json()
+    assert body["total"] == 2 and len(body["papers"]) == 1
