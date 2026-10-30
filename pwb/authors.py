@@ -21,6 +21,7 @@ import urllib.request
 
 from . import llm, survey
 from .pdfs import UA, _throttle
+from .store import ref_title
 from .util import now
 
 OPENALEX = "https://api.openalex.org/"
@@ -512,7 +513,7 @@ def teams(store, q="", limit=60):
             g = groups.setdefault(top, {"papers": {}, "people": {}, "keywords": {}, "units": {}, "score": 0.0})
             if r["id"] in g["papers"]:
                 continue
-            g["papers"][r["id"]] = {"id": r["id"], "title": d.get("titleZh") or d["title"], "year": d.get("year")}
+            g["papers"][r["id"]] = {"id": r["id"], "title": ref_title(d, r["id"]), "year": d.get("year")}
             g["score"] += weight
             for kw in d.get("matchedKeywords") or []:
                 g["keywords"][kw["label"]] = g["keywords"].get(kw["label"], 0) + 1

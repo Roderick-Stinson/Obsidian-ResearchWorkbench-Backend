@@ -111,7 +111,8 @@ PAPER_SUMMARY = obj({"id": PID, "title": TEXT, "titleZh": nullable(STR), "firstA
                      "urls": obj({"source": nullable(URL), "pdf": nullable(URL), "code": nullable(URL)}), "topics": arr(TEXT),
                      "libraryRelevance": nullable(enum("core", "related")), "user": USER, "institutions": arr(TEXT)},
                     optional=("institutions",))
-BRIEF_PAPER = obj({"id": PID, "title": TEXT, "summary": STR, "publishedAt": nullable(DATE), "url": URL}, optional=("url",))
+BRIEF_PAPER = obj({"id": PID, "title": TEXT, "titleZh": nullable(STR), "summary": STR, "publishedAt": nullable(DATE), "url": URL},
+                  optional=("url", "titleZh"))
 CLASSIC_EVIDENCE = obj({"libraryCitations": nullable(INT), "citations": nullable(INT), "baselineCount": nullable(INT),
                         "githubStars": nullable(INT), "codeUrl": nullable(URL)})
 COUNTS = obj({"core": INT, "adjacent": INT, "trending": INT})

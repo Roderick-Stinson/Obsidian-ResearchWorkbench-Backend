@@ -50,6 +50,12 @@ DOC_KEYS = {
 DOC_KINDS = {"overview", "pipeline", "brief", "recommendations-index", "recommendations-day", "classics", "map",
              "results-index", "results-benchmark", "ideas", "hotspots", "reports-index", "report",
              "experiments", "inbox"}
+def ref_title(d, pid=None):
+    """论文引用（PaperRef）里显示的标题：论文原题；收录时没拿到原题（标题就是 ID）的才用中文标题。"""
+    title = d.get("title") or ""
+    return title if title and title != (pid or d.get("id")) else d.get("titleZh") or title or pid or ""
+
+
 # 这些来源的论文（每日推荐、笔记里要追的论文）不算进论文库，除非你标了相关 / 重点关注 / 本人论文，或者写了阅读笔记。
 HIDDEN_ORIGINS = ("recommendation", "note-follow")
 # paper 返回体里由存储层拼出来、不存进 data 的字段。

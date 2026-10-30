@@ -75,6 +75,16 @@
                   "title": {
                     "$ref": "common.schema.json#/$defs/Text"
                   },
+                  "titleZh": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "summary": {
                     "type": "string"
                   },
@@ -124,6 +134,16 @@
               },
               "title": {
                 "$ref": "common.schema.json#/$defs/Text"
+              },
+              "titleZh": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "summary": {
                 "type": "string"

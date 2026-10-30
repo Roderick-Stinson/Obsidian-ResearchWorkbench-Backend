@@ -721,13 +721,14 @@ def _brief(store, config, date, recs, log, reading=""):
             res = llm.complete_json(store.settings, config, SYSTEM, prompt, BRIEF_SCHEMA)
             summary = res.get("summary", "")
             for h in res.get("highlights", []):
-                refs = [{"id": picks[i]["id"], "title": picks[i]["titleZh"], "url": picks[i]["url"]} for i in h.get("refs", []) if 0 <= i < len(picks)]
+                refs = [{"id": picks[i]["id"], "title": picks[i]["titleEn"], "url": picks[i]["url"]} for i in h.get("refs", []) if 0 <= i < len(picks)]
                 if refs and h.get("title") and h.get("text"):
                     highlights.append({"title": h["title"], "text": h["text"], "sources": refs})
         except llm.LLMError as e:
             log("简报没写成（{}），只列精选".format(e))
     def brief_paper(p):
-        return {"id": p["id"], "title": p["titleZh"], "summary": p["summary"], "publishedAt": p["publishedAt"], "url": p["url"]}
+        # 先论文原题，中文结论式标题放在 titleZh
+        return {"id": p["id"], "title": p["titleEn"], "titleZh": p["titleZh"], "summary": p["summary"], "publishedAt": p["publishedAt"], "url": p["url"]}
     accepted = (store.get_kv("daily-accepted") or {}).get(date, [])
     store.put_doc({"schemaVersion": 1, "kind": "brief", "generatedAt": now(), "runId": "daily-" + date, "date": date, "updatedAt": now(),
                    "newCount": len(recs), "pickedCount": len(picks), "summary": summary, "highlights": highlights,

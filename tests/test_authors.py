@@ -175,3 +175,20 @@ def test_universities_are_not_merged_into_parent():
              "I4": {"name": "Institute of Computing Technology", "type": "facility", "parent": "I3"}}
     assert authors.top_of(insts, "I2") == "I2", "UCL 自成一组"
     assert authors.top_of(insts, "I4") == "I3", "计算所并到中科院"
+
+
+def test_ref_titles_migration(store):
+    """旧数据里的论文引用显示的是中文结论式标题：启动时换成原题，简报里另存中文标题。"""
+    from pwb import migrate
+    store.upsert_paper(full(id="arxiv-2501.00001", title="Agent Teams Search", titleZh="用超网把搜索成本降一半", authors=[],
+                            year=2025, publicationStatus="预印本", summary=""))
+    store.put_doc({"schemaVersion": 1, "kind": "brief", "generatedAt": "2026-10-30T00:00:00+08:00", "runId": "daily-2026-10-30",
+                   "date": "2026-10-30", "updatedAt": "2026-10-30T00:00:00+08:00", "newCount": 1, "pickedCount": 1, "summary": "",
+                   "highlights": [{"title": "要点", "text": "说明", "sources": [{"id": "arxiv-2501.00001", "title": "用超网把搜索成本降一半"}]}],
+                   "picks": [{"id": "arxiv-2501.00001", "title": "用超网把搜索成本降一半", "summary": "速读", "publishedAt": "2026-10-29", "reason": "核心"}],
+                   "todayNew": [], "weekly": None})
+    store.set_kv("migrated-ref-titles", None)
+    migrate.run(store)
+    b = store.get_doc("brief", "2026-10-30")
+    assert b["picks"][0]["title"] == "Agent Teams Search" and b["picks"][0]["titleZh"] == "用超网把搜索成本降一半"
+    assert b["highlights"][0]["sources"][0] == {"id": "arxiv-2501.00001", "title": "Agent Teams Search"}

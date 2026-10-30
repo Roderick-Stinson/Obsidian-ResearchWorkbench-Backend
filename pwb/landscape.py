@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 
 from . import hotspots, llm, profile
 from .dblp import NOT_MAIN
+from .store import ref_title
 from .survey import _direction_text, _norm_title, _safe_id, _topics, _venue_short
 from .util import TZ, dumps, now
 
@@ -233,7 +234,7 @@ def build_classics(store, config, log, top=None, min_lib=None):
     def ref_of(c):
         if c["lib"]:
             d = papers[c["lib"]]
-            return {"id": c["lib"], "title": d.get("titleZh") or d["title"], "url": _ref_url(c["ref"])}
+            return {"id": c["lib"], "title": ref_title(d, c["lib"]), "url": _ref_url(c["ref"])}
         return {"id": None, "title": c["ref"]["title"], "url": _ref_url(c["ref"])}
 
     def evidence(c):
@@ -329,7 +330,7 @@ def _must_read(store, config, log, papers, counts, by_title, refs):
             date = next((v.get("date") for v in d.get("versions") or [] if v.get("date")), None)
             url = (d.get("urls") or {}).get("source") or ("https://arxiv.org/abs/" + pid[6:] if pid.startswith("arxiv-") else None)
             venue = (d.get("venue") or "") + ("（中稿待核实）" if d.get("publicationStatus") != "已发表" else "")
-            out.append({"paper": {"id": pid, "title": d.get("titleZh") or d["title"], **({"url": url} if url else {})}, "date": _month(date, d.get("year")) or "0000",
+            out.append({"paper": {"id": pid, "title": ref_title(d, pid), **({"url": url} if url else {})}, "date": _month(date, d.get("year")) or "0000",
                         "period": label, "venue": venue, "venueTier": _venue_tier(d.get("venue")), "why": why,
                         "evidence": {"libraryCitations": lib_counts.get(pid, 0), "citations": (d.get("citations") or {}).get("count"),
                                      "baselineCount": None, "githubStars": None, "codeUrl": (d.get("urls") or {}).get("code")}})
@@ -425,7 +426,7 @@ def build_map(store, config, log):
     for year in sorted(by_year):
         for pid, d in sorted(by_year[year], key=lambda x: -((x[1].get("citations") or {}).get("count") or 0))[:15]:
             key = "P{}".format(len(refs))
-            refs[key] = {"id": pid, "title": d.get("titleZh") or d["title"], "_date": str(year), "_venue": d.get("venue") or ""}
+            refs[key] = {"id": pid, "title": ref_title(d, pid), "_date": str(year), "_venue": d.get("venue") or ""}
             lines.append("{} | {} | {} | 方向：{} | 被引 {}".format(key, d["title"], d.get("venue") or year, "、".join(d.get("topics") or []),
                                                                 (d.get("citations") or {}).get("count") or 0))
     # H = 全领域热点的代表论文（arXiv 最近三个月），让最近的阶段能引用到还没进论文库的新工作。
