@@ -191,8 +191,8 @@ class Store:
 
     @staticmethod
     def reading_state(user, note_status):
-        """读没读过：标了“已读”或阅读笔记的 status 是精读 / 已读的算已读；笔记是粗读或打过分的算粗读；其余（包括笔记还是待读的）算未读。"""
-        if "已读" in (user.get("flags") or []) or note_status in ("精读", "已读"):
+        """读没读过：阅读笔记的 status 是精读 / 已读的算已读；笔记是粗读或打过分的算粗读；其余（包括笔记还是待读的）算未读。"""
+        if note_status in ("精读", "已读"):
             return "已读"
         return "粗读" if note_status == "粗读" or user.get("rating") else "未读"
 

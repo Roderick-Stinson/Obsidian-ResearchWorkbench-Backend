@@ -197,10 +197,11 @@ def test_library_reading_filter(client, store):
                                                   note("arxiv-2501.00002", "b", [], status="粗读"),
                                                   note("arxiv-2501.00003", "c", [], status="待读")]})
     body = assert_contract(client.get(API + "/papers?facets=true").json(), "paper-list")
-    assert {f["label"]: f["count"] for f in body["facets"]["reading"]} == {"已读": 2, "粗读": 2, "未读": 2}
+    assert {f["label"]: f["count"] for f in body["facets"]["reading"]} == {"已读": 1, "粗读": 2, "未读": 3}
     by = {p["id"]: (p["reading"], p["noteStatus"]) for p in body["items"]}
     assert by["arxiv-2501.00003"] == ("未读", "待读"), "笔记还是待读就算没读"
     assert by["arxiv-2501.00009"] == ("粗读", None), "打过分的算粗读"
+    assert by["arxiv-2501.00000"][0] == "未读", "只看笔记和评分，不看“已读”标记"
     unread = client.get(API + "/papers?reading=未读&status=已发表").json()
-    assert [p["id"] for p in unread["items"]] == ["arxiv-2501.00003"], "没读过的已发表论文"
+    assert sorted(p["id"] for p in unread["items"]) == ["arxiv-2501.00000", "arxiv-2501.00003"], "没读过的已发表论文"
     assert client.get(API + "/papers?reading=读过").status_code in (400, 422)
