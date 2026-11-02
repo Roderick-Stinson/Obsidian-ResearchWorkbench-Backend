@@ -244,6 +244,11 @@
         },
         "followRecommend": {
           "type": "boolean"
+        },
+        "followLookbackDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365
         }
       },
       "required": [],

@@ -143,7 +143,7 @@ REC_SETTINGS = {
     "weekly": {"newAccepted": BOOL, "map": BOOL, "classics": BOOL},
     "library": {"autoAdd": arr(CATS, uniqueItems=True)},
     "backlog": {"days": rng(1, 60), "max": rng(0, 50)},
-    "authors": {"daily": BOOL, "readPdf": BOOL, "maxPerDay": rng(0, 1000), "followRecommend": BOOL},
+    "authors": {"daily": BOOL, "readPdf": BOOL, "maxPerDay": rng(0, 1000), "followRecommend": BOOL, "followLookbackDays": rng(1, 365)},
     "notes": {"sections": closed({k: TEXT for k in ("relation", "ideas", "follow")}), "screening": BOOL, "asSeeds": BOOL,
               "seedStatuses": arr(TEXT, uniqueItems=True), "seedMinRating": rng(0, 5), "followToQueue": BOOL, "candidates": BOOL},
 }

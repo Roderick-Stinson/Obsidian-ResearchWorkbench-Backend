@@ -82,7 +82,8 @@
     "daily": true,
     "readPdf": true,
     "maxPerDay": 60,
-    "followRecommend": true
+    "followRecommend": true,
+    "followLookbackDays": 30
   },
   "updatedAt": null,
   "streams": [

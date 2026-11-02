@@ -47,7 +47,7 @@ DEFAULTS = {
               "screening": True, "asSeeds": True, "seedStatuses": ["精读", "已读"], "seedMinRating": 4,
               "followToQueue": True, "candidates": True},
     # 作者机构（见 authors.py）：每天给新进论文库的论文补上；关注的人有新论文时推荐出来。
-    "authors": {"daily": True, "readPdf": True, "maxPerDay": 60, "followRecommend": True},
+    "authors": {"daily": True, "readPdf": True, "maxPerDay": 60, "followRecommend": True, "followLookbackDays": 30},
 }
 SECTIONS = list(DEFAULTS)
 CATEGORIES = ("core", "adjacent", "trending")
@@ -217,7 +217,8 @@ def step_fetch(store, cfg, date, log):
         state["huggingface"] = end.isoformat()
         store.set_kv("daily-fetch", state)
     if cfg["authors"]["followRecommend"]:
-        since = (datetime.fromisoformat(date) - timedelta(days=cfg["adjacent"]["lookbackDays"])).date().isoformat()
+        # 比一般的回看期长：新论文进 OpenAlex 有时要过一阵子，回看太短会漏。已经推过的不会重复推。
+        since = (datetime.fromisoformat(date) - timedelta(days=cfg["authors"]["followLookbackDays"])).date().isoformat()
         works = authors.followed_works(store, since, log)
         new = sum(_add(store, arxiv, {**fields, "followed": [p["key"] for p in who]}, date) for arxiv, fields, who in works)
         if works:

@@ -1,4 +1,6 @@
 """作者机构与团队：OpenAlex、PDF 第一页、大模型都用假的。"""
+from datetime import datetime, timedelta
+
 from pwb import authors, daily, llm
 
 from .conftest import API, assert_contract
@@ -125,7 +127,9 @@ def test_daily_recommends_followed_people(client, store, monkeypatch):
     assert by_id["arxiv-2610.00077"]["category"] == "adjacent" and "来自你关注的Wei Wang（中国科学院）" in by_id["arxiv-2610.00077"]["reason"], \
         "关注的人的新论文（OpenAlex 按人取来）"
     assert "来自你关注的B" in by_id["arxiv-2610.00002"]["reason"], "按作者名字认出关注的人"
-    assert any(c[0] == "works" and "author.id:A1" in c[1]["filter"] for c in calls)
+    since = (datetime.fromisoformat(DATE) - timedelta(days=30)).date().isoformat()
+    assert any(c[0] == "works" and "author.id:A1" in c[1]["filter"] and "from_publication_date:" + since in c[1]["filter"] for c in calls), \
+        "关注的人回看 30 天，比一般的回看期长"
     steps = {s["key"]: s["status"] for s in client.get(API + "/pipeline").json()["latestRun"]["steps"]}
     assert steps["affiliations"] == "ok"
 
