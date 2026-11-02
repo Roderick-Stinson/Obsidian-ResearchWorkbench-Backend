@@ -155,13 +155,14 @@ def create_app(settings):
                venue: Optional[str] = None, year: Optional[int] = None, status: Optional[str] = None,
                relevance: Optional[str] = Query(None, pattern="^(core|related|none)$"),
                rating: Optional[str] = Query(None, pattern="^(unrated|[1-5])$"),
+               reading: Optional[str] = Query(None, pattern="^(已读|粗读|未读)$"),
                sort: str = Query("added", pattern="^(relevance|newest|citations|rating|added)$"), facets: bool = False,
                cursor: Optional[str] = None, limit: int = Query(50, ge=1, le=200)):
         if cursor is not None and not cursor.isdigit():
             raise invalid("cursor 不合法")
         offset = int(cursor or 0)
         items, total, facet_counts = store.list_papers(q.strip(), watched, offset, limit, own, topic, venue, year, status,
-                                                        relevance, rating, sort, facets)
+                                                        relevance, rating, sort, facets, reading)
         next_cursor = str(offset + len(items)) if offset + len(items) < total else None
         body = {"items": items, "nextCursor": next_cursor, "total": total}
         if facet_counts is not None:

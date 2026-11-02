@@ -112,8 +112,9 @@ PAPER_SUMMARY = obj({"id": PID, "title": TEXT, "titleZh": nullable(STR), "firstA
                      "venue": STR, "publicationStatus": enum("已发表", "已录用", "投稿中", "预印本", "待核实"),
                      "hasPdf": BOOL, "citations": CITATIONS, "summary": STR,
                      "urls": obj({"source": nullable(URL), "pdf": nullable(URL), "code": nullable(URL)}), "topics": arr(TEXT),
-                     "libraryRelevance": nullable(enum("core", "related")), "user": USER, "institutions": arr(TEXT)},
-                    optional=("institutions",))
+                     "libraryRelevance": nullable(enum("core", "related")), "user": USER, "institutions": arr(TEXT),
+                     "reading": enum("已读", "粗读", "未读"), "noteStatus": nullable(STR)},
+                    optional=("institutions", "reading", "noteStatus"))
 BRIEF_PAPER = obj({"id": PID, "title": TEXT, "titleZh": nullable(STR), "summary": STR, "publishedAt": nullable(DATE), "url": URL},
                   optional=("url", "titleZh"))
 CLASSIC_EVIDENCE = obj({"libraryCitations": nullable(INT), "citations": nullable(INT), "baselineCount": nullable(INT),
@@ -196,7 +197,7 @@ responses = {
     "recommendations-backlog": ("之前没看的精选", obj({
         "days": INT, "max": INT, "total": INT, "papers": arr({"allOf": [REC_PAPER, obj({"date": DATE})]})}), False),
     "paper-list": ("论文列表", obj({"items": arr(PAPER_SUMMARY), "nextCursor": nullable(STR), "total": INT,
-                                 "facets": obj({k: arr(obj({"label": TEXT, "count": INT})) for k in ("topic", "venue", "year", "status", "relevance")})},
+                                 "facets": obj({k: arr(obj({"label": TEXT, "count": INT})) for k in ("topic", "venue", "year", "status", "relevance", "reading")})},
                                 optional=("facets",)), False),
     "paper": ("论文详情", obj({
         "id": PID, "aliases": arr(PID, uniqueItems=True), "title": TEXT, "titleZh": nullable(STR),

@@ -324,6 +324,23 @@
                     "items": {
                       "$ref": "common.schema.json#/$defs/Text"
                     }
+                  },
+                  "reading": {
+                    "enum": [
+                      "已读",
+                      "粗读",
+                      "未读"
+                    ]
+                  },
+                  "noteStatus": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [

@@ -187,31 +187,39 @@ class Store:
             return self._paper_from_row(c, c.execute("SELECT * FROM papers WHERE id = ?", (pid,)).fetchone())
 
     SORTS = ("relevance", "newest", "citations", "rating", "added")
-    FACETS = ("topic", "venue", "year", "status", "relevance")
+    FACETS = ("topic", "venue", "year", "status", "relevance", "reading")
 
     @staticmethod
-    def _facet_values(d, user):
+    def reading_state(user, note_status):
+        """读没读过：标了“已读”或阅读笔记的 status 是精读 / 已读的算已读；笔记是粗读或打过分的算粗读；其余（包括笔记还是待读的）算未读。"""
+        if "已读" in (user.get("flags") or []) or note_status in ("精读", "已读"):
+            return "已读"
+        return "粗读" if note_status == "粗读" or user.get("rating") else "未读"
+
+    @classmethod
+    def _facet_values(cls, d, user, note_status=None):
         """一篇论文在各分面上的取值（topic 可以有多个）。"""
         return {"topic": d.get("topics") or [], "venue": [re.sub(r"\s*\d{4}$", "", d.get("venue") or "") or "未知"],
                 "year": [str(d["year"])] if d.get("year") else ["未知"], "status": [d.get("publicationStatus") or "待核实"],
-                "relevance": [d.get("libraryRelevance") or "none"]}
+                "relevance": [d.get("libraryRelevance") or "none"], "reading": [cls.reading_state(user, note_status)]}
 
     def list_papers(self, q="", watched=None, offset=0, limit=50, own=None, topic=None, venue=None, year=None,
-                    status=None, relevance=None, rating=None, sort="added", with_facets=False):
+                    status=None, relevance=None, rating=None, sort="added", with_facets=False, reading=None):
         """论文库查询：筛选、排序、分页，可选返回分面计数（每个分面按“除它自己以外的筛选条件”计数）。
         论文是几千篇的量级，直接在内存里筛，比拼 SQL 简单。返回 (items, total, facets 或 None)。"""
         with self.conn() as c:
             rows = c.execute("SELECT * FROM papers").fetchall()
             users = {r["paper_id"]: r for r in c.execute("SELECT * FROM paper_user")}
-            noted = {r["paper_id"] for r in c.execute("SELECT paper_id FROM notes")}
+            noted = {r["paper_id"]: r["status"] for r in c.execute("SELECT paper_id, status FROM notes")}
             papers = []
             for row in rows:
                 d = json.loads(row["data"])
                 u = self._user(c, row["id"]) if row["id"] in users else {"paperId": row["id"], "rating": 0, "flags": [], "relevance": None,
                                                                         "watched": False, "own": False, "discussionStatus": None, "updatedAt": None}
-                papers.append((row, d, u, self._facet_values(d, u)))
+                papers.append((row, d, u, self._facet_values(d, u, noted.get(row["id"]))))
         terms = [t for t in (q or "").lower().split() if t]
-        chosen = {"topic": topic, "venue": venue, "year": str(year) if year else None, "status": status, "relevance": relevance}
+        chosen = {"topic": topic, "venue": venue, "year": str(year) if year else None, "status": status, "relevance": relevance,
+                  "reading": reading}
 
         def basic(row, d, u):
             if d.get("origin") in HIDDEN_ORIGINS and not (u["watched"] or u["own"] or u["relevance"] == "相关" or row["id"] in noted):
@@ -254,8 +262,9 @@ class Store:
                   "year": d.get("year"), "venue": d.get("venue", ""), "publicationStatus": d["publicationStatus"],
                   "hasPdf": bool(row["pdf_file"]), "citations": d.get("citations", {"count": None, "updatedAt": None}),
                   "summary": d.get("summary") or "", "urls": d.get("urls") or {"source": None, "pdf": None, "code": None},
-                  "topics": d.get("topics") or [], "libraryRelevance": d.get("libraryRelevance"), "user": u}
-                 for row, d, u, _ in hits[offset:offset + limit]]
+                  "topics": d.get("topics") or [], "libraryRelevance": d.get("libraryRelevance"), "user": u,
+                  "reading": fv["reading"][0], "noteStatus": noted.get(row["id"])}
+                 for row, d, u, fv in hits[offset:offset + limit]]
         facets = None
         if with_facets:
             facets = {}

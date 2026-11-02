@@ -127,10 +127,12 @@ write(R + "paper-list.json", {**resp("paper-list", False), "items": [
      "summary": "把多智能体架构搜索变成在智能体超网上按查询采样子架构。",
      "urls": {"source": "https://openreview.net/pdf?id=imcyVlzpXh", "pdf": "https://arxiv.org/pdf/2502.04180", "code": "https://github.com/bingreeky/MaAS"},
      "topics": ["查询自适应DAG架构搜索"], "libraryRelevance": "core",
-     "user": user("openreview-imcyVlzpXh", watched=True, relevance="相关", discussionStatus="待讨论", updatedAt=GEN)}],
+     "user": user("openreview-imcyVlzpXh", watched=True, relevance="相关", discussionStatus="待讨论", updatedAt=GEN),
+     "reading": "粗读", "noteStatus": "粗读"}],
     "nextCursor": None, "total": 1,
     "facets": {"topic": [{"label": "查询自适应DAG架构搜索", "count": 1}], "venue": [{"label": "ICML", "count": 1}],
-               "year": [{"label": "2025", "count": 1}], "status": [{"label": "已发表", "count": 1}], "relevance": [{"label": "core", "count": 1}]}})
+               "year": [{"label": "2025", "count": 1}], "status": [{"label": "已发表", "count": 1}], "relevance": [{"label": "core", "count": 1}],
+               "reading": [{"label": "粗读", "count": 1}]}})
 write(R + "paper-topics.json", {**resp("paper-topics", False), "items": [{"label": "查询自适应DAG架构搜索", "count": 42}, {"label": "LLM 可解释性", "count": 17}]})
 write(R + "deep-read.json", {**resp("deep-read", at="2026-10-27T15:42:05+08:00"), "paperId": "arxiv-2610.17613",
     "markdown": "## 研究动机\n\n（示例）……\n\n## 方法\n\n（示例）……", "sources": [ref("arxiv-2610.17613", "MAS-Gate")]})

@@ -34,7 +34,9 @@
         "own": false,
         "discussionStatus": "待讨论",
         "updatedAt": "2026-10-27T15:39:49+08:00"
-      }
+      },
+      "reading": "粗读",
+      "noteStatus": "粗读"
     }
   ],
   "nextCursor": null,
@@ -67,6 +69,12 @@
     "relevance": [
       {
         "label": "core",
+        "count": 1
+      }
+    ],
+    "reading": [
+      {
+        "label": "粗读",
         "count": 1
       }
     ]
