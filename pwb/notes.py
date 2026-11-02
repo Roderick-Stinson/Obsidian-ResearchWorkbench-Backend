@@ -58,9 +58,16 @@ def section(note, name):
     return "\n".join(t for t in out if t.strip()).strip()
 
 
-def is_seed(note, ncfg):
+def _ratings(store):
+    """你在面板上打的星（论文 ID → 1–5）。笔记里不再单独记评分。"""
+    with store.conn() as c:
+        return {r["paper_id"]: r["rating"] for r in c.execute("SELECT paper_id, rating FROM paper_user WHERE rating > 0")}
+
+
+def is_seed(note, ncfg, rating=0):
+    """当种子：笔记的 status 是 seedStatuses 之一，或你在面板上给这篇打的星不低于 seedMinRating。"""
     return bool(ncfg["asSeeds"] and (note.get("status") in ncfg["seedStatuses"]
-                                     or (ncfg["seedMinRating"] and (note.get("rating") or 0) >= ncfg["seedMinRating"])))
+                                     or (ncfg["seedMinRating"] and (rating or 0) >= ncfg["seedMinRating"])))
 
 
 # ---------- 论文引用 ----------
@@ -113,6 +120,7 @@ def sync(store, items, ensure, ncfg):
         rows[pid] = {**it, "paperId": pid}
     store.replace_notes(rows.values())
     store.set_kv("notes-sync", {"skipped": skipped, "syncedAt": now()})
+    store.prune_queue()  # 笔记改成粗读及以上的，移出阅读队列
     queued = follow(store, ncfg, ensure) if ncfg["followToQueue"] else []
     return {**body(store, ncfg), "sync": {"ids": ids, "queued": queued}}
 
@@ -145,8 +153,10 @@ def body(store, ncfg):
     """约定里的 notes 返回体。"""
     prof = store.get_kv("reading-profile")
     st = store.get_kv("notes-sync") or {}
-    items = [{"paperId": n["paperId"], "path": n["path"], "title": n["title"], "status": n["status"], "rating": n["rating"],
-              "mtime": n["mtime"], "sections": [s["heading"] for s in n["sections"]], "seed": is_seed(n, ncfg)} for n in store.get_notes()]
+    ratings = _ratings(store)
+    items = [{"paperId": n["paperId"], "path": n["path"], "title": n["title"], "status": n["status"], "rating": ratings.get(n["paperId"]),
+              "mtime": n["mtime"], "sections": [s["heading"] for s in n["sections"]], "seed": is_seed(n, ncfg, ratings.get(n["paperId"]))}
+             for n in store.get_notes()]
     return {"items": items, "skipped": st.get("skipped", []), "updatedAt": st.get("syncedAt"),
             "profile": {k: prof[k] for k in ("generatedAt", "summary", "points")} if prof else None}
 
@@ -154,7 +164,15 @@ def body(store, ncfg):
 # ---------- 推荐里用 ----------
 
 def seed_ids(store, ncfg):
-    return [n["paperId"] for n in store.get_notes() if is_seed(n, ncfg)]
+    """笔记和评分带来的种子：{论文 ID: 在推荐理由里怎么称呼}。精读 / 已读过的，和你在面板上打了高分的（有没有笔记都算）。"""
+    if not ncfg["asSeeds"]:
+        return {}
+    out = {n["paperId"]: "你精读过的" for n in store.get_notes() if n["status"] in ncfg["seedStatuses"]}
+    if ncfg["seedMinRating"]:
+        for pid, r in _ratings(store).items():
+            if r >= ncfg["seedMinRating"]:
+                out.setdefault(pid, "你打了 {} 星的".format(r))
+    return out
 
 
 def points(store, ncfg):
@@ -170,13 +188,13 @@ def profile_summary(store, ncfg):
 
 def _sources(store, ncfg):
     """整理要点用的笔记：[(论文 ID, 标题, 状态, 评分, 两节的文字)]，只要两节里至少一节写了的。"""
-    out = []
+    out, ratings = [], _ratings(store)
     for n in store.get_notes()[:MAX_NOTES]:
         parts = [(name, section(n, name)) for name in (ncfg["sections"]["relation"], ncfg["sections"]["ideas"])]
         text = "\n".join("【{}】{}".format(name, t) for name, t in parts if t)[:MAX_NOTE_CHARS]
         if text:
             paper = store.get_paper(n["paperId"])
-            out.append((n["paperId"], paper["title"] if paper else n["title"], n["status"], n["rating"], text))
+            out.append((n["paperId"], paper["title"] if paper else n["title"], n["status"], ratings.get(n["paperId"]), text))
     return out
 
 

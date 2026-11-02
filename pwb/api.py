@@ -151,7 +151,8 @@ def create_app(settings):
     # ---------- 论文 ----------
 
     @r.get("/papers")
-    def papers(q: str = "", watched: Optional[bool] = None, own: Optional[bool] = None, topic: Optional[str] = None,
+    def papers(q: str = "", watched: Optional[bool] = None, own: Optional[bool] = None, queued: Optional[bool] = None,
+               topic: Optional[str] = None,
                venue: Optional[str] = None, year: Optional[int] = None, status: Optional[str] = None,
                relevance: Optional[str] = Query(None, pattern="^(core|related|none)$"),
                rating: Optional[str] = Query(None, pattern="^(unrated|[1-5])$"),
@@ -162,7 +163,7 @@ def create_app(settings):
             raise invalid("cursor 不合法")
         offset = int(cursor or 0)
         items, total, facet_counts = store.list_papers(q.strip(), watched, offset, limit, own, topic, venue, year, status,
-                                                        relevance, rating, sort, facets, reading)
+                                                        relevance, rating, sort, facets, reading, queued)
         next_cursor = str(offset + len(items)) if offset + len(items) < total else None
         body = {"items": items, "nextCursor": next_cursor, "total": total}
         if facet_counts is not None:

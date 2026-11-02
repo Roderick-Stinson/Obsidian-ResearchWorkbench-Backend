@@ -204,13 +204,14 @@ class Store:
                 "relevance": [d.get("libraryRelevance") or "none"], "reading": [cls.reading_state(user, note_status)]}
 
     def list_papers(self, q="", watched=None, offset=0, limit=50, own=None, topic=None, venue=None, year=None,
-                    status=None, relevance=None, rating=None, sort="added", with_facets=False, reading=None):
+                    status=None, relevance=None, rating=None, sort="added", with_facets=False, reading=None, queued=None):
         """论文库查询：筛选、排序、分页，可选返回分面计数（每个分面按“除它自己以外的筛选条件”计数）。
         论文是几千篇的量级，直接在内存里筛，比拼 SQL 简单。返回 (items, total, facets 或 None)。"""
         with self.conn() as c:
             rows = c.execute("SELECT * FROM papers").fetchall()
             users = {r["paper_id"]: r for r in c.execute("SELECT * FROM paper_user")}
             noted = {r["paper_id"]: r["status"] for r in c.execute("SELECT paper_id, status FROM notes")}
+            queue = set((self._kv(c, "queue") or {}).get("paperIds", []))
             papers = []
             for row in rows:
                 d = json.loads(row["data"])
@@ -228,6 +229,8 @@ class Store:
             if watched is not None and u["watched"] != watched:
                 return False
             if own is not None and u["own"] != own:
+                return False
+            if queued is not None and (row["id"] in queue) != queued:
                 return False
             if rating == "unrated" and u["rating"]:
                 return False
@@ -372,7 +375,23 @@ class Store:
             c.execute("UPDATE paper_user SET updated_at = ? WHERE paper_id = ?", (now(), pid))
             if {"relevance", "own", "watched"} & set(patch):
                 self._mark_interests_stale(c)
-            return self._user(c, pid)
+            user = self._user(c, pid)
+        if patch.get("rating"):
+            self.prune_queue()  # 打了分就算读过，移出阅读队列
+        return user
+
+    def prune_queue(self):
+        """阅读队列里已经读过的（笔记是粗读及以上，或打过分）自动移出。返回移出的论文 ID。"""
+        with self.conn() as c:
+            queue = self._kv(c, "queue")
+            if not queue or not queue["paperIds"]:
+                return []
+            noted = {r["paper_id"]: r["status"] for r in c.execute("SELECT paper_id, status FROM notes")}
+            done = [pid for pid in queue["paperIds"]
+                    if self.reading_state(self._user(c, pid), noted.get(pid)) != "未读"]
+            if done:
+                self._set_kv(c, "queue", {"paperIds": [p for p in queue["paperIds"] if p not in done], "updatedAt": now()})
+            return done
 
     @staticmethod
     def _kv(c, key):

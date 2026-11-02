@@ -48,8 +48,8 @@ def test_sync_resolves_follows_and_library(client, store):
         note("https://arxiv.org/abs/2611.00001v1", "新论文的笔记", [], status="待读"),
         note("还没填", "没填 ID 的笔记", [])]}
     res = assert_contract(client.put(API + "/me/notes", json=body).json(), "notes")
-    assert {n["paperId"]: n["seed"] for n in res["items"]} == {MAAS: True, "arxiv-2610.00009": True, "arxiv-2611.00001": False}, \
-        "精读的、评分 4 的算精读过"
+    assert {n["paperId"]: n["seed"] for n in res["items"]} == {MAAS: True, "arxiv-2610.00009": False, "arxiv-2611.00001": False}, \
+        "精读的算种子；笔记里写的 rating 不算，只看面板上打的星"
     assert sorted(s["path"] for s in res["skipped"]) == ["论文阅读/MaAS 旧笔记.md", "论文阅读/没填 ID 的笔记.md"]
     assert res["sync"]["ids"]["https://arxiv.org/abs/2610.00009"] == "arxiv-2610.00009"
     assert res["sync"]["ids"]["https://arxiv.org/abs/2611.00001v1"] == "arxiv-2611.00001", "按链接收录"
@@ -58,6 +58,9 @@ def test_sync_resolves_follows_and_library(client, store):
     ids = {p["id"] for p in client.get(API + "/papers").json()["items"]}
     assert ids == {MAAS, "arxiv-2610.00009", "arxiv-2611.00001"}, "写了笔记的进论文库；要追的论文只进队列"
     assert assert_contract(client.get(API + "/me/notes").json(), "notes")["items"] == res["items"]
+    client.patch(API + "/me/papers/arxiv-2610.00009", json={"rating": 4})
+    rated = {n["paperId"]: (n["seed"], n["rating"]) for n in client.get(API + "/me/notes").json()["items"]}
+    assert rated["arxiv-2610.00009"] == (True, 4), "面板上打 4 星算种子"
 
     # 从队列里删掉，再同步也不会加回来。
     client.put(API + "/me/queue", json={"paperIds": []})
@@ -106,7 +109,8 @@ def test_step_notes_profile_and_candidates(store, monkeypatch):
     cfg = daily.get_settings(store)
     ensure = lambda url, origin=None: None  # noqa: E731
     sections = [("1. 研究动机", "不参与"), ("和我的研究的关系", "按查询采样。"), ("想法与疑问", "自演化增益可疑。")]
-    notes.sync(store, [note(MAAS, "MaAS 笔记", sections, rating=5)], ensure, cfg["notes"])
+    store.patch_user(MAAS, {"rating": 5})
+    notes.sync(store, [note(MAAS, "MaAS 笔记", sections)], ensure, cfg["notes"])
     msg, _ = notes.step_notes(store, cfg, DATE, print, {})
     assert "关心的问题 1 条、存疑的思路 1 条，候选关键词 1 个" in msg, msg
     assert "按查询采样。" in calls[0] and "不参与" not in calls[0] and "《MaAS》（精读，评分 5）" in calls[0]
@@ -205,3 +209,30 @@ def test_library_reading_filter(client, store):
     unread = client.get(API + "/papers?reading=未读&status=已发表").json()
     assert sorted(p["id"] for p in unread["items"]) == ["arxiv-2501.00000", "arxiv-2501.00003"], "没读过的已发表论文"
     assert client.get(API + "/papers?reading=读过").status_code in (400, 422)
+
+
+def test_rated_papers_are_seeds(store):
+    paper(store, MAAS, "MaAS")
+    paper(store, "arxiv-2501.00007", "Rated Only")
+    paper(store, "arxiv-2501.00008", "Low Rated")
+    store.patch_user("arxiv-2501.00007", {"rating": 5})
+    store.patch_user("arxiv-2501.00008", {"rating": 3})
+    cfg = daily.get_settings(store)["notes"]
+    notes.sync(store, [note(MAAS, "MaAS 笔记", [], status="已读")], lambda url, origin=None: None, cfg)
+    assert notes.seed_ids(store, cfg) == {MAAS: "你精读过的", "arxiv-2501.00007": "你打了 5 星的"}, "没写笔记、打了高分的也算种子"
+    index = daily._seed_index(store, [], notes.seed_ids(store, cfg))
+    assert index["arxiv-2501.00007"][2] == "你打了 5 星的" and index[MAAS.lower()][2] == "你精读过的"
+
+
+def test_queue_drops_read_papers(client, store):
+    ids = ["arxiv-2501.0001%d" % i for i in range(4)]
+    for pid in ids:
+        paper(store, pid, "Q " + pid)
+    client.put(API + "/me/queue", json={"paperIds": ids})
+    client.patch(API + "/me/papers/" + ids[0], json={"rating": 3})
+    assert client.get(API + "/me/queue").json()["paperIds"] == ids[1:], "打了分就算读过，移出队列"
+    client.patch(API + "/me/papers/" + ids[1], json={"watched": True})
+    client.put(API + "/me/notes", json={"notes": [note(ids[1], "b", [], status="待读"), note(ids[2], "c", [], status="粗读")]})
+    assert client.get(API + "/me/queue").json()["paperIds"] == [ids[1], ids[3]], "笔记粗读及以上的移出；还是待读的、只改了别的标记的留着"
+    q = client.get(API + "/papers?queued=true").json()
+    assert sorted(p["id"] for p in q["items"]) == [ids[1], ids[3]] and client.get(API + "/papers?queued=false").json()["total"] == 2

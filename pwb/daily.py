@@ -403,12 +403,13 @@ def step_classify(store, cfg, date, log, config):
 
 # ---------- 4. 邻近 / 热点 ----------
 
-def _seed_index(store, seeds, note_ids=()):
-    """种子论文的各种编号和归一化标题 → (论文 ID, 标题, 身份)。note_ids：精读过的论文（来自阅读笔记）。"""
+def _seed_index(store, seeds, note_seeds=None):
+    """种子论文的各种编号和归一化标题 → (论文 ID, 标题, 身份)。note_seeds：精读过、打了高分的论文 → 身份（notes.seed_ids）。"""
+    note_seeds = note_seeds or {}
     role_sql = {"own": "u.own = 1", "watched": "u.watched = 1", "relevant": "u.relevance = '相关'"}
     index, names = {}, {"notes": "你精读过的", "own": "本人论文", "watched": "关注的", "relevant": "标为相关的", "library": "论文库里的"}
     with store.conn() as c:
-        rows = [("notes", r) for r in c.execute("SELECT id, data FROM papers WHERE id IN ({})".format(",".join("?" * len(note_ids))), list(note_ids))]
+        rows = [("notes", r) for r in c.execute("SELECT id, data FROM papers WHERE id IN ({})".format(",".join("?" * len(note_seeds))), list(note_seeds))]
         for role in seeds:
             if role in role_sql:
                 rows += [(role, r) for r in c.execute("SELECT p.id, p.data FROM papers p JOIN paper_user u ON u.paper_id = p.id WHERE " + role_sql[role])]
@@ -419,7 +420,7 @@ def _seed_index(store, seeds, note_ids=()):
             aliases.setdefault(a["paper_id"], []).append(a["alias"])
     for role, r in rows:
         d = json.loads(r["data"])
-        entry = (r["id"], d["title"], names[role])
+        entry = (r["id"], d["title"], note_seeds[r["id"]] if role == "notes" else names[role])
         for pid in [r["id"], *aliases.get(r["id"], [])]:
             index.setdefault(pid.lower(), entry)
         index.setdefault("t:" + survey._norm_title(d["title"]), entry)
