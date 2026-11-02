@@ -84,3 +84,13 @@ def test_verify_skips_status_you_set(client, store, tmp_path):
     client.patch(API + "/papers/dblp-journals_corr_abs-2605-00001", json={"publicationStatus": "待核实", "venue": "我自己写的"})
     assert dblp.verify_library(store, out, log=lambda m: None, min_index=0) == {"verified": 0, "elsewhere": 0, "notFound": 0}
     assert client.get(API + "/papers/arxiv-2605.00001").json()["venue"] == "我自己写的"
+
+
+def test_formal_version_label_follows_venue(client, store):
+    unverified_paper(store, "dblp-conf_iclr_X25", "Label Follows Venue", ["arxiv-2605.00002"])
+    paper = store.get_paper("dblp-conf_iclr_X25")
+    paper["versions"].insert(0, {"id": "dblp-conf_iclr_X25", "kind": "proceedings", "label": "ICLR 2024", "url": None, "date": None})
+    store.upsert_paper({**paper, "venue": "ICLR 2025", "year": 2025}, paper["aliases"])
+    assert [v["label"] for v in client.get(API + "/papers/dblp-conf_iclr_X25").json()["versions"]] == ["ICLR 2025", "arXiv"]
+    client.patch(API + "/papers/dblp-conf_iclr_X25", json={"venue": "ICLR 2026"})
+    assert client.get(API + "/papers/dblp-conf_iclr_X25").json()["versions"][0]["label"] == "ICLR 2026"

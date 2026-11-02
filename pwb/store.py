@@ -122,6 +122,11 @@ class Store:
         """新增或更新论文元数据。paper 为 paper 返回体中的字段（不含 id 以外的计算字段）。"""
         pid = paper["id"]
         data = {k: v for k, v in paper.items() if k not in PAPER_COMPUTED}
+        # 正式版本（会议 / 期刊）的标签跟着 venue 走：领域检索重新入库、预印本中稿升级、你手动改会议时都只改 venue，
+        # 不同步的话标签会停在第一次入库时推断的会议年份上。正式版本不止一个时分不清是哪个，不动。
+        formal = [i for i, v in enumerate(data.get("versions") or []) if v.get("kind") in ("proceedings", "journal")]
+        if data.get("venue") and len(formal) == 1:
+            data["versions"] = [{**v, "label": data["venue"]} if i == formal[0] else v for i, v in enumerate(data["versions"])]
         search = " ".join([pid, *aliases, data.get("title") or "", data.get("titleZh") or "", data.get("venue") or "", *data.get("authors", [])]).lower()
         ts = now()
         with self.conn() as c:
