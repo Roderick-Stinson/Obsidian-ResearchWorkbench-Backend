@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/scheme-create.schema.json",
+  "title": "新建分类方案",
+  "type": "object",
+  "properties": {
+    "name": {
+      "$ref": "common.schema.json#/$defs/Text"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "topic",
+            "query",
+            "watched",
+            "own",
+            "all"
+          ]
+        },
+        "value": {
+          "$ref": "common.schema.json#/$defs/Text"
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "multi": {
+      "type": "boolean"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/Text"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 2,
+      "maxItems": 20
+    }
+  },
+  "required": [
+    "name",
+    "scope",
+    "categories"
+  ],
+  "additionalProperties": false
+}

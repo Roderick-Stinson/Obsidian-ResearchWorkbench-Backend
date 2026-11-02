@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/scheme-suggestions.schema.json",
+  "title": "AI 提出的分法",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "scheme-suggestions"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "topic",
+                "query",
+                "watched",
+                "own",
+                "all"
+              ]
+            },
+            "value": {
+              "$ref": "common.schema.json#/$defs/Text"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "paperCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sampled": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "generatedAt": {
+          "$ref": "common.schema.json#/$defs/DateTime"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "multi": {
+                "type": "boolean"
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "estimate": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description",
+                    "estimate"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "rationale",
+              "multi",
+              "categories"
+            ]
+          }
+        }
+      },
+      "required": [
+        "scope",
+        "paperCount",
+        "sampled",
+        "generatedAt",
+        "items"
+      ]
+    }
+  ]
+}

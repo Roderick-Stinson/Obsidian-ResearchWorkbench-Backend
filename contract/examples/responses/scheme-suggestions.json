@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "scheme-suggestions",
+  "scope": {
+    "kind": "topic",
+    "value": "多智能体架构的编排优化"
+  },
+  "paperCount": 208,
+  "sampled": 150,
+  "generatedAt": "2026-10-27T15:39:49+08:00",
+  "items": [
+    {
+      "name": "MAS 的生成粒度",
+      "rationale": "看一次性给出完整架构和逐步构建哪种更多",
+      "multi": false,
+      "categories": [
+        {
+          "name": "逐步生成",
+          "description": "一步加一个节点或一条边",
+          "estimate": 60
+        },
+        {
+          "name": "一次性生成",
+          "description": "一次输出完整的架构或工作流",
+          "estimate": 90
+        }
+      ]
+    }
+  ]
+}

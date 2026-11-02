@@ -173,6 +173,20 @@ write(R + "teams.json", {**resp("teams", False), "total": 1, "coverage": {"paper
 write(R + "follows.json", {**resp("follows", False), "updatedAt": GEN, "people": [
     {"key": "A0000000001", "name": "Example Advisor", "openalexId": "A0000000001", "institution": "I0000000003",
      "institutionName": "（示例）某大学", "followedAt": GEN}]})
+_scheme = {"id": "sch-0a1b2c3d", "name": "MAS 的生成方式", "scope": {"kind": "topic", "value": "多智能体架构的编排优化"}, "multi": False,
+           "categories": [{"id": "c-nn0001", "name": "用神经网络生成 MAS", "description": "训练策略网络、图生成模型或 GNN 来产生架构"},
+                          {"id": "c-llm001", "name": "用 LLM 生成 MAS", "description": "由 LLM 通过提示或写代码直接给出架构"}],
+           "createdAt": GEN, "updatedAt": GEN, "version": "3f2a9c1d0b7e", "paperCount": 2, "pendingCount": 0}
+write(R + "schemes.json", {**resp("schemes", False), "items": [_scheme]})
+_lib = json.loads((OUT / (R + "paper-list.json")).read_text(encoding="utf-8"))["items"]
+write(R + "scheme.json", {**resp("scheme", False), "scheme": _scheme,
+    "categories": [{**_scheme["categories"][0], "count": 0}, {**_scheme["categories"][1], "count": 1}], "noneCount": 0,
+    "byYear": [{"year": 2025, "counts": {"c-nn0001": 0, "c-llm001": 1}, "none": 0}],
+    "papers": [{"paper": _lib[0], "categories": ["c-llm001"], "reason": "（示例）由元智能体用 LLM 写出团队配置", "source": "llm", "pending": False}]})
+write(R + "scheme-suggestions.json", {**resp("scheme-suggestions", False), "scope": _scheme["scope"], "paperCount": 208, "sampled": 150,
+    "generatedAt": GEN, "items": [{"name": "MAS 的生成粒度", "rationale": "看一次性给出完整架构和逐步构建哪种更多", "multi": False,
+                                   "categories": [{"name": "逐步生成", "description": "一步加一个节点或一条边", "estimate": 60},
+                                                  {"name": "一次性生成", "description": "一次输出完整的架构或工作流", "estimate": 90}]}]})
 write(R + "notes.json", {**resp("notes", False), "updatedAt": GEN,
     "items": [{"paperId": "arxiv-2502.04180", "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
                "title": "MaAS 用超网搜索多智能体架构", "status": "精读", "rating": 5, "mtime": 1761700000000,
@@ -288,6 +302,11 @@ write(B + "interests-extraction.json", {"overview": "（示例）关注多智能
         {"label": "多智能体架构搜索", "summary": "示例二级关键词", "evidence": [ev_maas], "children": [
             {"label": "查询自适应的超网采样", "summary": "示例三级关键词", "evidence": [ev_maas]}]}]}]})
 write(B + "llm-settings-put.json", {"engine": "deepseek", "model": "deepseek-reasoner"})
+write(B + "scheme-create.json", {"name": "MAS 的生成方式", "scope": {"kind": "topic", "value": "多智能体架构的编排优化"}, "multi": False,
+    "categories": [{"name": "用神经网络生成 MAS", "description": "训练策略网络、图生成模型或 GNN 来产生架构"},
+                   {"name": "用 LLM 生成 MAS", "description": "由 LLM 通过提示或写代码直接给出架构"}]})
+write(B + "scheme-patch.json", {"name": "MAS 的生成方式（改）"})
+write(B + "scheme-label-put.json", {"categories": ["c-llm001"]})
 write(B + "follow-put.json", {"name": "Example Advisor", "openalexId": "A0000000001", "institution": "I0000000003"})
 write(B + "notes-put.json", {"notes": [{"paperId": "arxiv-2502.04180", "path": "论文阅读/论文笔记整理/MaAS 用超网搜索多智能体架构.md",
     "title": "MaAS 用超网搜索多智能体架构", "status": "精读", "rating": 5, "mtime": 1761700000000,

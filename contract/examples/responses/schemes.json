@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "kind": "schemes",
+  "items": [
+    {
+      "id": "sch-0a1b2c3d",
+      "name": "MAS 的生成方式",
+      "scope": {
+        "kind": "topic",
+        "value": "多智能体架构的编排优化"
+      },
+      "multi": false,
+      "categories": [
+        {
+          "id": "c-nn0001",
+          "name": "用神经网络生成 MAS",
+          "description": "训练策略网络、图生成模型或 GNN 来产生架构"
+        },
+        {
+          "id": "c-llm001",
+          "name": "用 LLM 生成 MAS",
+          "description": "由 LLM 通过提示或写代码直接给出架构"
+        }
+      ],
+      "createdAt": "2026-10-27T15:39:49+08:00",
+      "updatedAt": "2026-10-27T15:39:49+08:00",
+      "version": "3f2a9c1d0b7e",
+      "paperCount": 2,
+      "pendingCount": 0
+    }
+  ]
+}

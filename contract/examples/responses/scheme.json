@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "kind": "scheme",
+  "scheme": {
+    "id": "sch-0a1b2c3d",
+    "name": "MAS 的生成方式",
+    "scope": {
+      "kind": "topic",
+      "value": "多智能体架构的编排优化"
+    },
+    "multi": false,
+    "categories": [
+      {
+        "id": "c-nn0001",
+        "name": "用神经网络生成 MAS",
+        "description": "训练策略网络、图生成模型或 GNN 来产生架构"
+      },
+      {
+        "id": "c-llm001",
+        "name": "用 LLM 生成 MAS",
+        "description": "由 LLM 通过提示或写代码直接给出架构"
+      }
+    ],
+    "createdAt": "2026-10-27T15:39:49+08:00",
+    "updatedAt": "2026-10-27T15:39:49+08:00",
+    "version": "3f2a9c1d0b7e",
+    "paperCount": 2,
+    "pendingCount": 0
+  },
+  "categories": [
+    {
+      "id": "c-nn0001",
+      "name": "用神经网络生成 MAS",
+      "description": "训练策略网络、图生成模型或 GNN 来产生架构",
+      "count": 0
+    },
+    {
+      "id": "c-llm001",
+      "name": "用 LLM 生成 MAS",
+      "description": "由 LLM 通过提示或写代码直接给出架构",
+      "count": 1
+    }
+  ],
+  "noneCount": 0,
+  "byYear": [
+    {
+      "year": 2025,
+      "counts": {
+        "c-nn0001": 0,
+        "c-llm001": 1
+      },
+      "none": 0
+    }
+  ],
+  "papers": [
+    {
+      "paper": {
+        "id": "openreview-imcyVlzpXh",
+        "title": "Multi-agent Architecture Search via Agentic Supernet",
+        "titleZh": "MaAS：基于智能体超网的多智能体架构搜索",
+        "firstAuthor": "Guibin Zhang",
+        "year": 2025,
+        "venue": "ICML 2025",
+        "publicationStatus": "已发表",
+        "hasPdf": true,
+        "citations": {
+          "count": 120,
+          "updatedAt": "2026-10-27T01:10:00+08:00"
+        },
+        "summary": "把多智能体架构搜索变成在智能体超网上按查询采样子架构。",
+        "urls": {
+          "source": "https://openreview.net/pdf?id=imcyVlzpXh",
+          "pdf": "https://arxiv.org/pdf/2502.04180",
+          "code": "https://github.com/bingreeky/MaAS"
+        },
+        "topics": [
+          "查询自适应DAG架构搜索"
+        ],
+        "libraryRelevance": "core",
+        "user": {
+          "paperId": "openreview-imcyVlzpXh",
+          "rating": 0,
+          "flags": [],
+          "relevance": "相关",
+          "watched": true,
+          "own": false,
+          "discussionStatus": "待讨论",
+          "updatedAt": "2026-10-27T15:39:49+08:00"
+        }
+      },
+      "categories": [
+        "c-llm001"
+      ],
+      "reason": "（示例）由元智能体用 LLM 写出团队配置",
+      "source": "llm",
+      "pending": false
+    }
+  ]
+}

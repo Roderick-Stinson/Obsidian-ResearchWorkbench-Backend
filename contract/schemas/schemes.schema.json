@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/schemes.schema.json",
+  "title": "分类方案列表",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "schemes"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "name": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "scope": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "topic",
+                      "query",
+                      "watched",
+                      "own",
+                      "all"
+                    ]
+                  },
+                  "value": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "name": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description"
+                  ]
+                }
+              },
+              "multi": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              },
+              "updatedAt": {
+                "$ref": "common.schema.json#/$defs/DateTime"
+              },
+              "version": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "paperCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pendingCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "scope",
+              "categories",
+              "multi",
+              "createdAt",
+              "updatedAt",
+              "version",
+              "paperCount",
+              "pendingCount"
+            ]
+          }
+        }
+      },
+      "required": [
+        "items"
+      ]
+    }
+  ]
+}

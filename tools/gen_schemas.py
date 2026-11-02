@@ -84,6 +84,7 @@ common = {
     },
 }
 USER = ref("PaperUser")
+SCHEME_SCOPE = obj({"kind": enum("topic", "query", "watched", "own", "all"), "value": TEXT}, optional=("value",))
 TASK_TYPES = {
     "deep-read": obj({"paperId": PID}),
     "generate-report": obj({"type": enum("weekly", "monthly"), "period": PERIOD}),
@@ -92,6 +93,8 @@ TASK_TYPES = {
     "rebuild-interests": {"type": "object", "maxProperties": 0},
     "run-daily": {"type": "object", "maxProperties": 0},
     "retry-step": obj({"runId": TEXT, "step": enum(*STEP_KEYS)}),
+    "classify-scheme": obj({"schemeId": TEXT}),
+    "suggest-schemes": obj({"scope": SCHEME_SCOPE}),
     "rebuild-affiliations": {"type": "object", "properties": {"refresh": BOOL, "readPdf": BOOL}, "additionalProperties": False},
     "ingest-paper": obj({"url": URL, "watch": BOOL}),
     "claim-run": obj({"runId": TEXT, "target": CLAIM_TARGET}),
@@ -152,6 +155,10 @@ REC_PAPER = obj({
     "matchedKeywords": arr(KW_REF), "score": SCORE1, "picked": BOOL, "user": USER, "sources": arr(TEXT),
     "institutions": arr(TEXT), "domain": nullable(obj({"id": TEXT, "label": TEXT}))},
     optional=("sources", "institutions", "domain"))
+
+SCHEME_CAT = obj({"id": TEXT, "name": TEXT, "description": STR})
+SCHEME = obj({"id": TEXT, "name": TEXT, "scope": SCHEME_SCOPE, "categories": arr(SCHEME_CAT), "multi": BOOL, "createdAt": DT,
+              "updatedAt": DT, "version": TEXT, "paperCount": INT, "pendingCount": INT})
 
 # kind -> (title, body, generated)
 responses = {
@@ -232,6 +239,16 @@ responses = {
         "candidates": arr(obj({"id": TEXT, "parentId": TEXT, "level": enum(2, 3), "label": TEXT, "reason": TEXT,
                                "growth": obj({"paperCount": INT, "windowDays": INT, "changePct": NUM}),
                                "examples": PREFS, "source": enum("trend", "notes")}, optional=("source",)))}), True),
+    "schemes": ("分类方案列表", obj({"items": arr(SCHEME)}), False),
+    "scheme": ("一个分类方案和分类结果", obj({
+        "scheme": SCHEME, "categories": arr({"allOf": [SCHEME_CAT, obj({"count": INT})]}), "noneCount": INT,
+        "byYear": arr(obj({"year": INT, "counts": {"type": "object", "additionalProperties": INT}, "none": INT})),
+        "papers": arr(obj({"paper": PAPER_SUMMARY, "categories": arr(TEXT), "reason": STR, "source": nullable(enum("llm", "user")),
+                           "pending": BOOL}))}), False),
+    "scheme-suggestions": ("AI 提出的分法", obj({
+        "scope": SCHEME_SCOPE, "paperCount": INT, "sampled": INT, "generatedAt": DT,
+        "items": arr(obj({"name": TEXT, "rationale": STR, "multi": BOOL,
+                          "categories": arr(obj({"name": TEXT, "description": STR, "estimate": INT}))}))}), False),
     "notes": ("阅读笔记", obj({
         "items": arr(obj({"paperId": PID, "path": TEXT, "title": TEXT, "status": nullable(STR), "rating": nullable(rng(0, 5)),
                           "mtime": INT, "sections": arr(TEXT), "seed": BOOL})),
@@ -341,6 +358,15 @@ bodies = {
     "interests-extraction": ("一次关键词整理结果", obj({"overview": TEXT, "basis": BASIS,
                                                     "domains": arr(extraction_node(1), minItems=1)})),
     "llm-settings-put": ("切换大模型引擎", closed({"engine": enum(*LLM_ENGINES), "model": nullable(STR)}, optional=("model",))),
+    "scheme-create": ("新建分类方案", closed({
+        "name": TEXT, "scope": SCHEME_SCOPE, "multi": BOOL,
+        "categories": arr(closed({"id": TEXT, "name": TEXT, "description": STR}, optional=("id", "description")), minItems=2, maxItems=20)},
+        optional=("multi",))),
+    "scheme-patch": ("修改分类方案", closed({
+        "name": TEXT, "scope": SCHEME_SCOPE, "multi": BOOL,
+        "categories": arr(closed({"id": TEXT, "name": TEXT, "description": STR}, optional=("id", "description")), minItems=2, maxItems=20)},
+        minProperties=1)),
+    "scheme-label-put": ("手动改一篇论文的类别", closed({"categories": arr(TEXT, uniqueItems=True)}, optional=())),
     "follow-put": ("关注一个人", closed({"name": TEXT, "openalexId": nullable(STR), "institution": nullable(STR)}, optional=("openalexId", "institution"))),
     "notes-put": ("同步阅读笔记（整体替换）", closed({"notes": arr(closed({
         "paperId": TEXT, "path": TEXT, "title": TEXT, "status": nullable(STR), "rating": nullable(rng(0, 5)), "mtime": INT,

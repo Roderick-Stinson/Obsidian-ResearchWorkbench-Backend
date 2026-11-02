@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/scheme.schema.json",
+  "title": "一个分类方案和分类结果",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "scheme"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "scheme": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "common.schema.json#/$defs/Text"
+            },
+            "name": {
+              "$ref": "common.schema.json#/$defs/Text"
+            },
+            "scope": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "topic",
+                    "query",
+                    "watched",
+                    "own",
+                    "all"
+                  ]
+                },
+                "value": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "name": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "description"
+                ]
+              }
+            },
+            "multi": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "common.schema.json#/$defs/DateTime"
+            },
+            "version": {
+              "$ref": "common.schema.json#/$defs/Text"
+            },
+            "paperCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pendingCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "scope",
+            "categories",
+            "multi",
+            "createdAt",
+            "updatedAt",
+            "version",
+            "paperCount",
+            "pendingCount"
+          ]
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "name": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "description"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        },
+        "noneCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "byYear": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "year": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "none": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "year",
+              "counts",
+              "none"
+            ]
+          }
+        },
+        "papers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "paper": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "common.schema.json#/$defs/PaperId"
+                  },
+                  "title": {
+                    "$ref": "common.schema.json#/$defs/Text"
+                  },
+                  "titleZh": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "firstAuthor": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "venue": {
+                    "type": "string"
+                  },
+                  "publicationStatus": {
+                    "enum": [
+                      "已发表",
+                      "已录用",
+                      "投稿中",
+                      "预印本",
+                      "待核实"
+                    ]
+                  },
+                  "hasPdf": {
+                    "type": "boolean"
+                  },
+                  "citations": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "updatedAt": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/DateTime"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "updatedAt"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "urls": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/Url"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "pdf": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/Url"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "code": {
+                        "anyOf": [
+                          {
+                            "$ref": "common.schema.json#/$defs/Url"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "pdf",
+                      "code"
+                    ]
+                  },
+                  "topics": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    }
+                  },
+                  "libraryRelevance": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "core",
+                          "related"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "user": {
+                    "$ref": "common.schema.json#/$defs/PaperUser"
+                  },
+                  "institutions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/Text"
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "titleZh",
+                  "firstAuthor",
+                  "year",
+                  "venue",
+                  "publicationStatus",
+                  "hasPdf",
+                  "citations",
+                  "summary",
+                  "urls",
+                  "topics",
+                  "libraryRelevance",
+                  "user"
+                ]
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/Text"
+                }
+              },
+              "reason": {
+                "type": "string"
+              },
+              "source": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "llm",
+                      "user"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "pending": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "paper",
+              "categories",
+              "reason",
+              "source",
+              "pending"
+            ]
+          }
+        }
+      },
+      "required": [
+        "scheme",
+        "categories",
+        "noneCount",
+        "byYear",
+        "papers"
+      ]
+    }
+  ]
+}

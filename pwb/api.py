@@ -12,7 +12,7 @@ from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import __version__, authors, contract, daily, errors, interests, jobs, llm, migrate, notes, pdfmeta, pdfs
+from . import __version__, authors, contract, daily, errors, schemes, interests, jobs, llm, migrate, notes, pdfmeta, pdfs
 from .errors import invalid, not_found
 from .store import Store
 from .tasks import HANDLERS, Worker
@@ -351,6 +351,46 @@ def create_app(settings):
         body = await read_body(request, "notes-put")
         return out("notes", notes.sync(store, body["notes"], ensure_from_url, daily.get_settings(store)["notes"]))
 
+    # ---------- 分类方案 ----------
+
+    @r.get("/schemes")
+    def list_schemes():
+        return out("schemes", {"items": [schemes.summary(store, s) for s in schemes._all(store)]})
+
+    @r.post("/schemes")
+    async def create_scheme(request: Request):
+        body = await read_body(request, "scheme-create")
+        return out("scheme", schemes.detail(store, schemes.create(store, body)["id"]), status=201)
+
+    # 先于 /schemes/{scheme_id} 注册，否则 suggestions 会被当成方案编号
+    @r.get("/schemes/suggestions")
+    def scheme_suggestions():
+        body = store.get_kv("scheme-suggestions")
+        if body is None:
+            raise not_found("还没让 AI 提过分法")
+        return out("scheme-suggestions", body)
+
+    @r.get("/schemes/{scheme_id}")
+    def get_scheme(scheme_id: str):
+        return out("scheme", schemes.detail(store, scheme_id))
+
+    @r.patch("/schemes/{scheme_id}")
+    async def patch_scheme(scheme_id: str, request: Request):
+        body = await read_body(request, "scheme-patch")
+        schemes.patch(store, scheme_id, body)
+        return out("scheme", schemes.detail(store, scheme_id))
+
+    @r.delete("/schemes/{scheme_id}")
+    def delete_scheme(scheme_id: str):
+        schemes.delete(store, scheme_id)
+        return out("schemes", {"items": [schemes.summary(store, s) for s in schemes._all(store)]})
+
+    @r.put("/schemes/{scheme_id}/papers/{paper_id}")
+    async def put_scheme_label(scheme_id: str, paper_id: str, request: Request):
+        body = await read_body(request, "scheme-label-put")
+        schemes.set_label(store, scheme_id, require_paper(paper_id), body["categories"])
+        return out("scheme", schemes.detail(store, scheme_id))
+
     # ---------- 作者机构与团队 ----------
 
     @r.get("/teams")
@@ -458,6 +498,10 @@ def create_app(settings):
             if not pid:
                 raise invalid("论文不存在：" + params["paperId"])
             params = {**params, "paperId": pid}
+        elif body["type"] == "classify-scheme":
+            schemes.get(store, params["schemeId"])  # 方案不存在直接 404
+        elif body["type"] == "suggest-schemes":
+            params = {**params, "scope": schemes._check_scope(params["scope"])}
         task, created = store.create_task(new_id("task"), body["type"], params, request.headers.get("idempotency-key"))
         if created:
             worker.wake()

@@ -98,7 +98,30 @@ def rebuild_affiliations(store, params, progress):
     return msg, [{"kind": "data", "path": "/teams"}]
 
 
-HANDLERS = {"claim-run": claim_run, "rebuild-affiliations": rebuild_affiliations, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map,
+def classify_scheme(store, params, progress):
+    """按分类方案给范围里还没分的论文分类。"""
+    from . import llm, schemes
+    from .errors import ApiError
+    try:
+        msg, _ = schemes.classify(store, llm.get_config(store), params["schemeId"], progress)
+    except (llm.LLMError, ApiError) as e:
+        raise TaskFailed(getattr(e, "message", None) or str(e))
+    return msg, [{"kind": "data", "path": "/schemes/" + params["schemeId"]}]
+
+
+def suggest_schemes(store, params, progress):
+    """读一遍范围里的论文，提出几种分法。"""
+    from . import llm, schemes
+    from .errors import ApiError
+    try:
+        msg, _ = schemes.suggest(store, llm.get_config(store), params["scope"], progress)
+    except (llm.LLMError, ApiError) as e:
+        raise TaskFailed(getattr(e, "message", None) or str(e))
+    return msg, [{"kind": "data", "path": "/schemes/suggestions"}]
+
+
+HANDLERS = {"claim-run": claim_run, "rebuild-affiliations": rebuild_affiliations, "classify-scheme": classify_scheme,
+            "suggest-schemes": suggest_schemes, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map,
             "run-daily": run_daily, "retry-step": retry_step}
 
 

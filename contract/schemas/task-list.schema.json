@@ -34,6 +34,8 @@
                   "rebuild-interests",
                   "run-daily",
                   "retry-step",
+                  "classify-scheme",
+                  "suggest-schemes",
                   "rebuild-affiliations",
                   "ingest-paper",
                   "claim-run"
@@ -297,6 +299,71 @@
                       "required": [
                         "runId",
                         "step"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "classify-scheme"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "params": {
+                      "type": "object",
+                      "properties": {
+                        "schemeId": {
+                          "$ref": "common.schema.json#/$defs/Text"
+                        }
+                      },
+                      "required": [
+                        "schemeId"
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "suggest-schemes"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "params": {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "enum": [
+                                "topic",
+                                "query",
+                                "watched",
+                                "own",
+                                "all"
+                              ]
+                            },
+                            "value": {
+                              "$ref": "common.schema.json#/$defs/Text"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "scope"
                       ]
                     }
                   }

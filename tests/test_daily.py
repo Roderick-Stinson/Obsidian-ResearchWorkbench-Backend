@@ -44,6 +44,7 @@ def setup(store, monkeypatch, tree=True):
     monkeypatch.setattr(feed, "_search", search)
     # 抓取按“现在”往前取几天：固定在 DATE 当晚（北京时间 10-30 凌晨），测试不随真实日期变
     monkeypatch.setattr(daily, "_utcnow", lambda: datetime(2026, 10, 29, 17, 0, tzinfo=timezone.utc))
+    monkeypatch.setattr(daily, "today", lambda: DATE)  # “立刻刷新”用今天的日期：固定成周四，不触发每周任务（会联网）
     monkeypatch.setattr(daily, "_hf_day", lambda date: [dict(p) for p in HF] if date == "2026-10-28" else [])
 
     def s2(ids, fields, log, tries=20):
