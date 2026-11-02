@@ -31,8 +31,8 @@ def _throttle(url):
     _last[host] = time.time()
 
 
-def _get(url, tries=4):
-    """返回 (内容, 最终地址)；失败抛异常。限流或服务器暂时出错时等一会儿再试。"""
+def _get(url, tries=4, retry_429=True):
+    """返回 (内容, 最终地址)；失败抛异常。限流或服务器暂时出错时等一会儿再试（retry_429=False 时限流直接抛出，不再加压）。"""
     for attempt in range(tries):
         _throttle(url)
         try:
@@ -40,7 +40,7 @@ def _get(url, tries=4):
                 body = res.read(MAX_BYTES + 1)
                 return body, res.geturl()
         except urllib.error.HTTPError as e:
-            if e.code not in (429, 500, 502, 503, 504) or attempt == tries - 1:
+            if e.code not in (429, 500, 502, 503, 504) or attempt == tries - 1 or (e.code == 429 and not retry_429):
                 raise
         except (urllib.error.URLError, TimeoutError):
             if attempt == tries - 1:

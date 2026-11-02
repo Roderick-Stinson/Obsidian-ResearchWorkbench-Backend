@@ -1,6 +1,6 @@
 """每日推荐流水线：arXiv、Hugging Face、Semantic Scholar、大模型全部用假的。"""
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pwb import daily, feed, llm, profile
 from pwb.tasks import run_task
@@ -42,6 +42,8 @@ def setup(store, monkeypatch, tree=True):
         fetched.append((stream["key"], date_range))
         return len(ARXIV[stream["key"]]), [dict(r) for r in ARXIV[stream["key"]] if any(c.startswith(tuple(stream["categories"])) for c in r["cats"])]
     monkeypatch.setattr(feed, "_search", search)
+    # 抓取按“现在”往前取几天：固定在 DATE 当晚（北京时间 10-30 凌晨），测试不随真实日期变
+    monkeypatch.setattr(daily, "_utcnow", lambda: datetime(2026, 10, 29, 17, 0, tzinfo=timezone.utc))
     monkeypatch.setattr(daily, "_hf_day", lambda date: [dict(p) for p in HF] if date == "2026-10-28" else [])
 
     def s2(ids, fields, log, tries=20):
@@ -264,3 +266,21 @@ def test_backlog_of_unhandled_picks(client, store, monkeypatch):
     daily.put_settings(store, {"backlog": {"max": 1}})
     body = client.get(API + "/recommendations/backlog").json()
     assert body["total"] == 2 and len(body["papers"]) == 1
+
+
+def test_fetch_survives_arxiv_rate_limit(store, monkeypatch):
+    """arXiv 检索接口限流：不再请求 arXiv、不推进“抓到哪天”，Hugging Face 照常抓，这一步不算失败。"""
+    setup(store, monkeypatch)
+    daily.init(store)
+    calls = []
+
+    def limited(stream, date_range):
+        calls.append(stream["key"])
+        raise feed.ArxivLimited("限流")
+    monkeypatch.setattr(feed, "_search", limited)
+    store.set_kv("daily-fetch", {"agent": "2026-10-27T00:00:00+00:00", "interp": "2026-10-27T00:00:00+00:00"})
+    msg, added = daily.step_fetch(store, daily.get_settings(store), DATE, print)
+    assert calls == ["agent"], "限流后剩下的流不再请求"
+    assert "arXiv 检索接口限流" in msg and "Hugging Face 新增" in msg and added > 0
+    state = store.get_kv("daily-fetch")
+    assert state["agent"] == state["interp"] == "2026-10-27T00:00:00+00:00", "没抓到的流不推进"

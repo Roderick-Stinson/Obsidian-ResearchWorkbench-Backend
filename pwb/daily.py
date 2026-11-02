@@ -172,19 +172,31 @@ def _hf_day(date):
     return out
 
 
+def _utcnow():
+    """抓取到什么时候为止（测试里换成固定时间）。"""
+    return datetime.now(timezone.utc)
+
+
 def step_fetch(store, cfg, date, log):
     from . import feed
     state = store.get_kv("daily-fetch") or {}
-    end = datetime.now(timezone.utc)
+    end = _utcnow()
     floor = end - timedelta(days=cfg["schedule"]["maxCatchupDays"])
     added, msgs = 0, []
     enabled = cfg["sources"]["streams"]
+    limited = False
     for stream in profile.streams(store):
-        if not enabled.get(stream["key"], True):
+        if not enabled.get(stream["key"], True) or limited:
             continue
         last = state.get(stream["key"])
         start = max(floor, datetime.fromisoformat(last) - timedelta(days=OVERLAP_DAYS)) if last else end - timedelta(days=1 + OVERLAP_DAYS)
-        rows = feed.fetch_range(store, stream, start, end, log)
+        try:
+            rows = feed.fetch_range(store, stream, start, end, log)
+        except feed.ArxivLimited:
+            # 限流时这一轮不再请求 arXiv；没抓到的流不更新“抓到哪天”，下次接着抓。其他来源照常。
+            limited = True
+            msgs.append("arXiv 检索接口限流了，这次没抓 arXiv 论文流（{} 起的下次接着抓，不会漏）".format(stream["name"]))
+            continue
         new = sum(_add(store, r["id"], {k: r[k] for k in ("title", "abstract", "authors", "published", "cats")}, date, stream=stream["key"])
                   for r in rows)
         added += new

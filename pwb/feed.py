@@ -12,6 +12,7 @@ feed-streams 里，当月和上个月每次都重新取（还在增加）。改�
 import calendar
 import json
 import re
+import urllib.error
 import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -29,6 +30,10 @@ CREATE TABLE IF NOT EXISTS arxiv_feed (
   title TEXT NOT NULL, abstract TEXT NOT NULL, cats TEXT NOT NULL, PRIMARY KEY (stream, arxiv_id));
 CREATE INDEX IF NOT EXISTS arxiv_feed_month ON arxiv_feed(stream, month);
 """
+
+
+class ArxivLimited(RuntimeError):
+    """arXiv 的检索接口限流了（429 “Rate exceeded”）。这一轮不再请求它，下次从上次抓到的地方接着抓，不会漏。"""
 
 
 def _first_stream(store):
@@ -90,7 +95,12 @@ def _search(stream, date_range):
     while total is None or start < total:
         url = API + urllib.parse.urlencode({"search_query": q, "start": start, "max_results": PAGE,
                                             "sortBy": "submittedDate", "sortOrder": "ascending"})
-        body, _ = _get(url)
+        try:
+            body, _ = _get(url, retry_429=False)  # 限流了就停，重试只会延长限流
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                raise ArxivLimited("arXiv 检索接口限流了") from e
+            raise
         page_total, rows = _parse(body)
         total = page_total if total is None else total
         if not rows:  # arXiv 偶尔返回空页，不再往后翻
