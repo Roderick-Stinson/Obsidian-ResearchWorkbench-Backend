@@ -246,6 +246,21 @@ def test_relevance_marks_interests_stale(client, seeded):
     assert get(client, "/me/interests")["stale"] is True
 
 
+def test_add_paper_to_library(client, seeded):
+    """手动添加的论文进论文库，不带任何标记；之前因每日推荐收录、没显示在论文库里的，改成显示。"""
+    plain = client.post(API + "/papers", json={"title": "随手存的论文", "url": "https://openreview.net/forum?id=Lib0Add1Pp"})
+    assert plain.status_code == 201
+    user = plain.json()["user"]
+    assert not (user["own"] or user["watched"]) and user["relevance"] is None
+    ids = lambda: [p["id"] for p in get(client, "/papers?limit=200")["items"]]  # noqa: E731
+    assert "openreview-Lib0Add1Pp" in ids()
+    seeded.upsert_paper({**seeded.get_paper("openreview-Lib0Add1Pp"), "id": "openreview-Hid0Rec1Pp", "title": "Recommended", "versions": [], "origin": "recommendation"})
+    assert "openreview-Hid0Rec1Pp" not in ids()
+    again = client.post(API + "/papers", json={"url": "https://openreview.net/forum?id=Hid0Rec1Pp"})
+    assert again.status_code == 200 and "origin" not in again.json()
+    assert "openreview-Hid0Rec1Pp" in ids()
+
+
 def test_add_own_paper_and_upload_pdf(client, seeded, settings):
     res = client.post(API + "/papers", json={"title": "我的会议投稿", "url": "https://openreview.net/forum?id=Xz0wn1Pp3r", "own": True})
     assert res.status_code == 201

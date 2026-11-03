@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from . import __version__, authors, contract, daily, errors, schemes, interests, jobs, llm, migrate, notes, pdfmeta, pdfs
 from .errors import invalid, not_found
-from .store import Store
+from .store import HIDDEN_ORIGINS, Store
 from .tasks import HANDLERS, Worker
 from .util import TZ_NAME, arxiv_id_from_url, new_id, now
 
@@ -184,18 +184,23 @@ def create_app(settings):
         if settings.start_worker:
             threading.Thread(target=run, name="pwb-complete-" + pid, daemon=True).start()
 
-    def add_paper(url, title="", flags=None, origin=None):
+    def add_paper(url, title="", flags=None, origin=None, library=False):
         """按链接 / 标题收录一篇论文；已在论文库里的不重复建，只更新标记。返回 (论文 ID, 是否新建)。
-        给了 arXiv / OpenReview 链接的，后台会补上标题、作者等信息并下载 PDF。"""
+        给了 arXiv / OpenReview 链接的，后台会补上标题、作者等信息并下载 PDF。
+        library=True（你手动添加）时，之前因每日推荐或“要追的论文”收录、没显示在论文库里的，改成显示。"""
         m = OPENREVIEW_RE.search(url or "")
         pid = ("openreview-" + m.group(1) if m else arxiv_id_from_url(url)) or "local-" + secrets.token_hex(4)
         flags = flags or {}
         existing = store.resolve(pid)
         if existing:
             paper = store.get_paper(existing)
+            fixes = {}
             if paper["title"] == existing and title:
                 # 收录时没拿到标题（例如匿名投稿下载失败）的，用你填的标题补上。
-                store.upsert_paper({**paper, "title": title}, paper["aliases"])
+                fixes["title"] = title
+            unhide = library and paper.get("origin") in HIDDEN_ORIGINS
+            if fixes or unhide:
+                store.upsert_paper({k: v for k, v in {**paper, **fixes}.items() if not (unhide and k == "origin")}, paper["aliases"])
             if flags:
                 store.patch_user(existing, flags)
             if not paper["hasPdf"]:
@@ -217,13 +222,13 @@ def create_app(settings):
 
     @r.post("/papers")
     async def create_paper(request: Request):
-        """手动添加论文（本人论文、关注论文）。标题和链接至少填一个；给了 arXiv / OpenReview 链接的标题可以不填。"""
+        """手动添加论文到论文库（可同时标为本人论文 / 关注论文）。标题和链接至少填一个；给了 arXiv / OpenReview 链接的标题可以不填。"""
         body = await read_body(request, "paper-create")
         url = body.get("url")
         title = (body.get("title") or "").strip()
         if not title and not url:
             raise invalid("标题和链接至少填一个")
-        pid, created = add_paper(url, title, {k: body[k] for k in ("own", "watched") if body.get(k)})
+        pid, created = add_paper(url, title, {k: body[k] for k in ("own", "watched") if body.get(k)}, library=True)
         return out("paper", paper_body(pid), status=201 if created else 200)
 
     @r.patch("/papers/{paper_id}")
