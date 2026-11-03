@@ -262,6 +262,75 @@ def _note_accepted(store, date, entry):
     store.set_kv("daily-accepted", {d: v for d, v in acc.items() if d >= (datetime.fromisoformat(date) - timedelta(days=INDEX_DAYS)).date().isoformat()})
 
 
+VENUE_FIELDS = "title,venue,publicationVenue,year,publicationDate,externalIds"
+S2_MATCH = "https://api.semanticscholar.org/graph/v1/paper/search/match?"
+
+
+def _apply_venue(store, pid, d, venue):
+    """Semantic Scholar 查到的正式出版记录写进论文：改为已发表、填会议和年份、换成正式 ID（你改过的字段不动）。
+    返回 (论文现在的 ID, 改了的字段)。"""
+    paper = store.get_paper(pid)
+    edited = set(paper.get("userEdited") or [])
+    year = survey.venue_year(d)
+    fix = {k: v for k, v in {"publicationStatus": "已发表", "venue": "{} {}".format(venue, year or "").strip(), "year": year,
+                              "metadataStatus": "部分核实"}.items() if k not in edited}
+    if not fix:
+        return pid, fix
+    primary, aliases = survey._ids(d)
+    store.upsert_paper({**paper, **fix}, paper["aliases"] + [a for a in aliases if a != pid and not store.resolve(a)])
+    if primary != pid and store.resolve(primary) in (None, pid):
+        store.rename_paper(pid, primary)
+        pid = primary
+    return pid, fix
+
+
+def _s2_match(title, log, tries=8):
+    """按标题在 Semantic Scholar 找同一篇论文；标题对不上返回 None。"""
+    import os
+    headers = {"User-Agent": "paper-workbench/0.1"}
+    if os.environ.get("S2_API_KEY"):
+        headers["x-api-key"] = os.environ["S2_API_KEY"]
+    url = S2_MATCH + urllib.parse.urlencode({"query": title, "fields": VENUE_FIELDS})
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as res:
+                hits = json.loads(res.read()).get("data") or []
+            return next((h for h in hits if survey._norm_title(h.get("title")) == survey._norm_title(title)), None)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            if e.code not in (429, 500, 502, 503, 504):
+                raise
+        except urllib.error.URLError:
+            pass
+        time.sleep(min(60, 3 * (attempt + 1)))
+    raise RuntimeError("Semantic Scholar 一直限流或出错")
+
+
+def lookup_venue(store, pid, log=print):
+    """你手动添加的论文：到 Semantic Scholar 查正式出版记录，查到就填上会议和年份、改为已发表（不限你的会议范围）。
+    有 arXiv 编号的按编号查；没有的（例如只给了 OpenReview 链接，OpenReview 的接口要人机验证，程序不能用）按标题查，
+    标题要完全对上才算。本人论文不查，免得把投稿标题发出去；只有 arXiv 版本、没有正式出版记录的不改。返回论文现在的 ID。"""
+    paper = store.get_paper(pid)
+    if not paper or paper["user"]["own"] or paper.get("publicationStatus") not in ("待核实", "预印本"):
+        return pid
+    if {"venue", "publicationStatus"} <= set(paper.get("userEdited") or []):
+        return pid
+    arxiv = next((i[6:] for i in [paper["id"], *paper["aliases"]] if i.startswith("arxiv-")), None)
+    if arxiv:
+        d = (_s2_batch(["ARXIV:" + arxiv], VENUE_FIELDS, log, tries=8) or [None])[0]
+    else:
+        d = _s2_match(paper["title"], log) if paper["title"] != pid else None
+    venue = d and survey.acceptance(d) == "verified" and (
+        survey._venue_short(d, survey.venues(store)) or (d.get("publicationVenue") or {}).get("name") or d.get("venue"))
+    if not venue:
+        log("{}：Semantic Scholar 上没查到正式出版记录，发表状态保持不变".format(pid))
+        return pid
+    new, fix = _apply_venue(store, pid, d, venue)
+    log("{}：已从 Semantic Scholar 补上 {}".format(new, "、".join(fix) or "（没有要改的）"))
+    return new
+
+
 def step_version_check(store, cfg, date, log):
     """论文库里“待核实”的预印本：Semantic Scholar 有了正式出版记录（且在你的会议范围里）就改为已发表、换成正式 ID。"""
     vmap = survey.venues(store)
@@ -285,17 +354,9 @@ def step_version_check(store, cfg, date, log):
         if not short:
             continue
         paper = store.get_paper(pid)
-        edited = set(paper.get("userEdited") or [])
-        year = survey.venue_year(d)
-        fix = {k: v for k, v in {"publicationStatus": "已发表", "venue": "{} {}".format(short, year or "").strip(), "year": year,
-                                  "metadataStatus": "部分核实"}.items() if k not in edited}
+        pid, fix = _apply_venue(store, pid, d, short)
         if not fix:
             continue
-        primary, aliases = survey._ids(d)
-        store.upsert_paper({**paper, **fix}, paper["aliases"] + [a for a in aliases if a != pid and not store.resolve(a)])
-        if primary != pid and store.resolve(primary) in (None, pid):
-            store.rename_paper(pid, primary)
-            pid = primary
         upgraded += 1
         _note_accepted(store, date, {"paper": {"id": pid, "title": paper["title"]}, "venue": fix.get("venue", paper.get("venue", "")), "kind": "upgraded"})
     return "检查了 {} 篇预印本，{} 篇已中稿".format(len(todo), upgraded), upgraded

@@ -15,6 +15,18 @@
     },
     "watched": {
       "type": "boolean"
+    },
+    "venue": {
+      "type": "string"
+    },
+    "publicationStatus": {
+      "enum": [
+        "已发表",
+        "已录用",
+        "投稿中",
+        "预印本",
+        "待核实"
+      ]
     }
   },
   "required": [],

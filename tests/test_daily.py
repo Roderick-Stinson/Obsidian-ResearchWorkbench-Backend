@@ -189,6 +189,39 @@ def test_version_check_upgrades_preprint(client, store, monkeypatch):
     assert brief["accepted"] == [{"paper": {"id": "dblp-conf_icml_X26", "title": "Accepted Preprint"}, "venue": "ICML 2026", "kind": "upgraded"}]
 
 
+def test_lookup_venue_for_added_papers(client, store, monkeypatch):
+    """手动添加的论文：按 arXiv 编号或标题到 Semantic Scholar 查会议，会议不在你的范围里也填；本人论文和你填过的不查。"""
+    setup(store, monkeypatch)
+    asked = []
+    monkeypatch.setattr(daily, "_s2_batch", lambda ids, fields, log, tries=20: asked.extend(ids) or [
+        {"paperId": "s2a", "title": "Journal Paper", "venue": "Some Journal", "publicationVenue": {"name": "Some Journal"}, "year": 2025,
+         "externalIds": {"ArXiv": "2501.00043", "DOI": "10.1000/xyz"}}])
+    monkeypatch.setattr(daily, "_s2_match", lambda title, log: asked.append(title) or (
+        {"paperId": "s2b", "title": title, "venue": "ICLR", "year": 2025, "externalIds": {"DBLP": "conf/iclr/Y25"}}
+        if title == "Only On OpenReview" else None))
+    store.upsert_paper({"id": "arxiv-2501.00043", "title": "Journal Paper", "authors": [], "publicationStatus": "待核实", "summary": ""})
+    pid = daily.lookup_venue(store, "arxiv-2501.00043", log=lambda *a: None)
+    paper = store.get_paper(pid)
+    assert pid == "doi-10.1000_xyz" and paper["venue"] == "Some Journal 2025" and paper["publicationStatus"] == "已发表"
+
+    store.upsert_paper({"id": "openreview-Only0Rev1", "title": "Only On OpenReview", "authors": [], "publicationStatus": "待核实", "summary": ""})
+    pid = daily.lookup_venue(store, "openreview-Only0Rev1", log=lambda *a: None)
+    assert pid == "dblp-conf_iclr_Y25" and store.get_paper(pid)["venue"] == "ICLR 2025"
+
+    store.upsert_paper({"id": "openreview-Not0Found1", "title": "Not Published", "authors": [], "publicationStatus": "待核实", "summary": ""})
+    assert daily.lookup_venue(store, "openreview-Not0Found1", log=lambda *a: None) == "openreview-Not0Found1"
+    assert store.get_paper("openreview-Not0Found1")["publicationStatus"] == "待核实"
+
+    asked.clear()
+    mine = client.post(API + "/papers", json={"title": "My Submission", "own": True}).json()["id"]
+    filled = client.post(API + "/papers", json={"title": "Filled By Hand", "venue": "AAAI 2026", "publicationStatus": "已发表"}).json()
+    assert filled["venue"] == "AAAI 2026" and filled["publicationStatus"] == "已发表"
+    assert sorted(filled["userEdited"]) == ["publicationStatus", "venue"]
+    for i in (mine, filled["id"]):
+        daily.lookup_venue(store, i, log=lambda *a: None)
+    assert asked == [], "本人论文和你填过会议、发表状态的不查"
+
+
 def test_weekly_steps_only_on_weekly_day(store, monkeypatch):
     setup(store, monkeypatch)
     ran = []

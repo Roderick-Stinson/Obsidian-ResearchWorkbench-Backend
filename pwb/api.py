@@ -174,27 +174,33 @@ def create_app(settings):
     def paper_topics():
         return out("paper-topics", {"items": store.topic_counts()})
 
-    def complete_later(pid):
-        """后台从 arXiv 补信息、下载 PDF（要访问网络，不在请求里等）。测试里不起后台线程。"""
+    def complete_later(pid, venue=False):
+        """后台从 arXiv 补信息、下载 PDF；venue=True 时再到 Semantic Scholar 查会议（要访问网络，不在请求里等）。测试里不起后台线程。"""
         def run():
             try:
-                pdfs.complete_paper(store, pid, log=log.info)
+                if pid.startswith(("arxiv-", "openreview-")):
+                    pdfs.complete_paper(store, pid, log=log.info)
+                if venue:
+                    daily.lookup_venue(store, pid, log=log.info)
             except Exception:
                 log.exception("补全论文信息失败：%s", pid)
         if settings.start_worker:
             threading.Thread(target=run, name="pwb-complete-" + pid, daemon=True).start()
 
-    def add_paper(url, title="", flags=None, origin=None, library=False):
+    def add_paper(url, title="", flags=None, origin=None, library=False, info=None):
         """按链接 / 标题收录一篇论文；已在论文库里的不重复建，只更新标记。返回 (论文 ID, 是否新建)。
-        给了 arXiv / OpenReview 链接的，后台会补上标题、作者等信息并下载 PDF。
-        library=True（你手动添加）时，之前因每日推荐或“要追的论文”收录、没显示在论文库里的，改成显示。"""
+        给了 arXiv / OpenReview 链接的，后台会补上标题、作者等信息并下载 PDF；你手动添加、不是本人论文的，还会到 Semantic Scholar 查会议。
+        library=True（你手动添加）时，之前因每日推荐或“要追的论文”收录、没显示在论文库里的，改成显示。
+        info 是你填的会议 / 发表状态，记进 userEdited，自动流程不再覆盖。"""
         m = OPENREVIEW_RE.search(url or "")
         pid = ("openreview-" + m.group(1) if m else arxiv_id_from_url(url)) or "local-" + secrets.token_hex(4)
-        flags = flags or {}
+        flags, info = flags or {}, info or {}
         existing = store.resolve(pid)
         if existing:
             paper = store.get_paper(existing)
-            fixes = {}
+            fixes = dict(info)
+            if info:
+                fixes["userEdited"] = sorted(set(paper.get("userEdited") or []) | set(info))
             if paper["title"] == existing and title:
                 # 收录时没拿到标题（例如匿名投稿下载失败）的，用你填的标题补上。
                 fixes["title"] = title
@@ -203,21 +209,22 @@ def create_app(settings):
                 store.upsert_paper({k: v for k, v in {**paper, **fixes}.items() if not (unhide and k == "origin")}, paper["aliases"])
             if flags:
                 store.patch_user(existing, flags)
-            if not paper["hasPdf"]:
-                complete_later(existing)
+            if not paper["hasPdf"] or (library and not info):
+                complete_later(existing, venue=library)
             return existing, False
         kind = pid.split("-", 1)[0]
         store.upsert_paper({
             "id": pid, "title": title or pid, "titleZh": None, "authors": [], "firstAuthor": "", "year": None,
-            "venue": "", "publicationStatus": "投稿中" if flags.get("own") else "待核实",
+            "venue": "", "publicationStatus": "投稿中" if flags.get("own") else "待核实", **info,
+            **({"userEdited": sorted(info)} if info else {}),
             "versions": [{"id": pid, "kind": kind, "label": pid, "url": url, "date": None}] if kind in ("openreview", "arxiv") else [],
             "urls": {"source": url, "pdf": None, "code": None}, "pdfSha256": None,
             "citations": {"count": None, "updatedAt": None}, "metadataStatus": "待核实", "summary": "", "matchedKeywords": [],
             **({"origin": origin} if origin else {})})
         if flags:
             store.patch_user(pid, flags)
-        if kind in ("openreview", "arxiv"):
-            complete_later(pid)
+        if kind in ("openreview", "arxiv") or (library and not flags.get("own")):
+            complete_later(pid, venue=library)
         return pid, True
 
     @r.post("/papers")
@@ -228,7 +235,8 @@ def create_app(settings):
         title = (body.get("title") or "").strip()
         if not title and not url:
             raise invalid("标题和链接至少填一个")
-        pid, created = add_paper(url, title, {k: body[k] for k in ("own", "watched") if body.get(k)}, library=True)
+        info = {k: body[k].strip() if isinstance(body[k], str) else body[k] for k in ("venue", "publicationStatus") if body.get(k)}
+        pid, created = add_paper(url, title, {k: body[k] for k in ("own", "watched") if body.get(k)}, library=True, info=info)
         return out("paper", paper_body(pid), status=201 if created else 200)
 
     @r.patch("/papers/{paper_id}")
