@@ -201,7 +201,7 @@ def test_library_reading_filter(client, store):
                                                   note("arxiv-2501.00002", "b", [], status="粗读"),
                                                   note("arxiv-2501.00003", "c", [], status="待读")]})
     body = assert_contract(client.get(API + "/papers?facets=true").json(), "paper-list")
-    assert {f["label"]: f["count"] for f in body["facets"]["reading"]} == {"已读": 1, "粗读": 2, "未读": 3}
+    assert {f["label"]: f["count"] for f in body["facets"]["reading"]} == {"精读": 1, "粗读": 2, "未读": 3}
     by = {p["id"]: (p["reading"], p["noteStatus"]) for p in body["items"]}
     assert by["arxiv-2501.00003"] == ("未读", "待读"), "笔记还是待读就算没读"
     assert by["arxiv-2501.00009"] == ("粗读", None), "打过分的算粗读"
@@ -218,7 +218,7 @@ def test_rated_papers_are_seeds(store):
     store.patch_user("arxiv-2501.00007", {"rating": 5})
     store.patch_user("arxiv-2501.00008", {"rating": 3})
     cfg = daily.get_settings(store)["notes"]
-    notes.sync(store, [note(MAAS, "MaAS 笔记", [], status="已读")], lambda url, origin=None: None, cfg)
+    notes.sync(store, [note(MAAS, "MaAS 笔记", [], status="精读")], lambda url, origin=None: None, cfg)
     assert notes.seed_ids(store, cfg) == {MAAS: "你精读过的", "arxiv-2501.00007": "你打了 5 星的"}, "没写笔记、打了高分的也算种子"
     index = daily._seed_index(store, [], notes.seed_ids(store, cfg))
     assert index["arxiv-2501.00007"][2] == "你打了 5 星的" and index[MAAS.lower()][2] == "你精读过的"

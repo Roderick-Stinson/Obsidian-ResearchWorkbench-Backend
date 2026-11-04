@@ -113,7 +113,7 @@ PAPER_SUMMARY = obj({"id": PID, "title": TEXT, "titleZh": nullable(STR), "firstA
                      "hasPdf": BOOL, "citations": CITATIONS, "summary": STR,
                      "urls": obj({"source": nullable(URL), "pdf": nullable(URL), "code": nullable(URL)}), "topics": arr(TEXT),
                      "libraryRelevance": nullable(enum("core", "related")), "user": USER, "institutions": arr(TEXT),
-                     "reading": enum("已读", "粗读", "未读"), "noteStatus": nullable(STR)},
+                     "reading": enum("精读", "粗读", "未读"), "noteStatus": nullable(STR)},
                     optional=("institutions", "reading", "noteStatus"))
 BRIEF_PAPER = obj({"id": PID, "title": TEXT, "titleZh": nullable(STR), "summary": STR, "publishedAt": nullable(DATE), "url": URL},
                   optional=("url", "titleZh"))

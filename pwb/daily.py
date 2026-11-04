@@ -44,7 +44,7 @@ DEFAULTS = {
     "library": {"autoAdd": []},
     # 阅读笔记怎么参与推荐（见 notes.py）；sections 是模板里的小节名，改了模板标题要跟着改。
     "notes": {"sections": {"relation": "和我的研究的关系", "ideas": "想法与疑问", "follow": "要追的论文"},
-              "screening": True, "asSeeds": True, "seedStatuses": ["精读", "已读"], "seedMinRating": 4,
+              "screening": True, "asSeeds": True, "seedStatuses": ["精读"], "seedMinRating": 4,
               "followToQueue": True, "candidates": True},
     # 作者机构（见 authors.py）：每天给新进论文库的论文补上；关注的人有新论文时推荐出来。
     "authors": {"daily": True, "readPdf": True, "maxPerDay": 60, "followRecommend": True, "followLookbackDays": 30},
