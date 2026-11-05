@@ -75,7 +75,7 @@ python3 -m venv .venv
    | `venuesExtra` | 同上 | 清单以外的会议 / 期刊：`{"简称": {"names": ["Semantic Scholar 里的全称"], "kind": "proceedings" 或 "journal"}}`（DBLP 核实只支持内置清单） |
 
 3. **准备大模型**：默认用本机 Claude Code，装好后运行一次 `claude` 登录即可，不需要配置文件。用 DeepSeek 的话，写 `data/secrets.json`：`{"deepseekApiKey": "sk-..."}`，再在面板“设置 → 大模型引擎”里切换。
-4. **启动后端**：`.venv/bin/python -m pwb serve`。
+4. **启动后端**：`.venv/bin/python -m pwb serve`（占着一个终端）。想让它登录后自动启动、不用每次手动开，见[开机自启](#开机自启)。
 5. **装面板**：见[面板仓库](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)的 README。后端不在默认地址时，在面板“设置 → 后端连接”里改。
 6. **写下研究领域**：面板“我的研究领域” → “添加一级领域”，写你的大方向（说明里写清楚包括什么、不包括什么）。
 7. **加几篇代表论文**：
@@ -235,6 +235,11 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 ```
 
 日志在 `data/serve.log`。安装时会把当前终端里的 `PWB_*`、`S2_API_KEY`、`DEEPSEEK_*` 环境变量写进服务配置，改了要重新安装。
+
+- 安装前先停掉终端里手动开的后端（`Ctrl-C`），否则端口 8765 被占着，服务起不来。
+- 装好后后端登录就自启，退出了自动拉起；只在你登录之后运行（Linux 要没登录也跑，用 `loginctl enable-linger $USER`）。
+- 改了后端代码要重启服务：macOS 用 `launchctl kickstart -k gui/$(id -u)/com.paperworkbench.backend`，Linux 用 `systemctl --user restart pwb.service`。
+- 服务的 PATH 里已经补上 `~/.local/bin`、`/opt/homebrew/bin` 等，找得到 `claude` / `codex` 命令；装在别处的，用 `PWB_CLAUDE_BIN` / `PWB_CODEX_BIN` 指定后重新安装。
 
 ## 批量下载 PDF
 
