@@ -470,10 +470,13 @@ def create_app(settings):
     # ---------- 大模型引擎设置 ----------
 
     def llm_settings():
-        config, ready = llm.get_config(store), llm.status(settings)
+        config = llm.get_config(store)
+        ready = llm.status(settings, config["endpoints"])
         return out("llm-settings", {"engine": config["engine"], "updatedAt": config["updatedAt"], "engines": [
             {"key": k, "name": v["name"], "ready": ready[k][0], "detail": ready[k][1],
-             "model": config["models"].get(k), "defaultModel": v["defaultModel"]} for k, v in llm.ENGINES.items()]})
+             "model": config["models"].get(k), "defaultModel": v["defaultModel"],
+             "baseUrl": config["endpoints"].get(k), "keySet": bool(llm.engine_key(settings, k)),
+             "effort": config["efforts"].get(k), "effortOptions": llm.EFFORTS[k]} for k, v in llm.ENGINES.items()]})
 
     @r.get("/settings/recommend")
     def get_recommend_settings():
@@ -492,14 +495,33 @@ def create_app(settings):
     def get_llm_settings():
         return llm_settings()
 
+    @r.get("/settings/llm/models")
+    def get_llm_models(engine: str = Query(..., pattern="^(claude-code|codex|deepseek)$")):
+        """面板选模型用：向这个引擎的接口拉可用模型。拉不到时 items 为空或是内置常用名，message 写原因。"""
+        ids, source, message = llm.list_models(settings, engine, llm.get_config(store)["endpoints"].get(engine))
+        return out("llm-models", {"engine": engine, "items": ids, "source": source, "message": message})
+
     @r.put("/settings/llm")
     async def put_llm_settings(request: Request):
         body = await read_body(request, "llm-settings-put")
         saved = store.get_kv("llm") or {}
-        models = dict(saved.get("models") or {})
+        models, endpoints = dict(saved.get("models") or {}), dict(saved.get("endpoints") or {})
+        efforts = dict(saved.get("efforts") or {})
+        if "effort" in body:
+            if body["effort"] and body["effort"] not in llm.EFFORTS[body["engine"]]:
+                raise invalid("这个引擎的思考强度只能是：{}".format("、".join(llm.EFFORTS[body["engine"]]) or "（不支持）"))
+            efforts[body["engine"]] = body["effort"] or None
         if "model" in body:
             models[body["engine"]] = body["model"] or llm.ENGINES[body["engine"]]["defaultModel"]
-        store.set_kv("llm", {"engine": body["engine"], "models": models, "updatedAt": now()})
+        if "baseUrl" in body:
+            url = (body["baseUrl"] or "").strip()
+            if url and not re.match(r"^https?://\S+$", url):
+                raise invalid("接口地址要以 http:// 或 https:// 开头：" + url)
+            endpoints[body["engine"]] = url or None
+        if "apiKey" in body:
+            llm.set_engine_key(settings, body["engine"], body["apiKey"].strip())
+        engine = body["engine"] if body.get("select", True) else (saved.get("engine") or llm.DEFAULT_ENGINE)
+        store.set_kv("llm", {"engine": engine, "models": models, "endpoints": endpoints, "efforts": efforts, "updatedAt": now()})
         return llm_settings()
 
     # ---------- 任务 ----------

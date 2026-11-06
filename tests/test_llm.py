@@ -233,3 +233,155 @@ def test_codex_overrides_follow_user_config(tmp_path, monkeypatch):
     assert ["--disable", "plugins"] == args[:2] and 'model_reasoning_effort="low"' in args
     monkeypatch.setenv("HOME", str(tmp_path / "none"))
     assert "--disable" in llm._codex_overrides(), "没有 config.toml 也不报错"
+
+
+def test_engine_endpoint_and_key_from_panel(client, store, tmp_path, monkeypatch):
+    """面板里配接口地址和 key：key 只写不读，存 secrets.json（权限 600）；不切引擎的保存不改当前引擎。"""
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    body = assert_contract(client.put(API + "/settings/llm", json={
+        "engine": "codex", "model": "gpt-5", "baseUrl": " https://api.example.com/v1 ", "apiKey": " sk-secret-1 "}).json(), "llm-settings")
+    codex = {e["key"]: e for e in body["engines"]}["codex"]
+    assert body["engine"] == "codex" and codex["baseUrl"] == "https://api.example.com/v1" and codex["keySet"] and codex["model"] == "gpt-5"
+    assert "sk-secret-1" not in json.dumps(client.get(API + "/settings/llm").json()), "key 不能出现在返回里"
+    path = store.settings.data_dir / "secrets.json"
+    assert json.loads(path.read_text())["codexApiKey"] == "sk-secret-1" and stat.S_IMODE(path.stat().st_mode) == 0o600
+    body = client.put(API + "/settings/llm", json={"engine": "deepseek", "apiKey": "sk-ds", "select": False}).json()
+    assert body["engine"] == "codex" and {e["key"]: e for e in body["engines"]}["deepseek"]["keySet"], "select=false 只保存、不切换"
+    assert json.loads(path.read_text())["codexApiKey"] == "sk-secret-1", "改一个引擎的 key 不动别的"
+    body = client.put(API + "/settings/llm", json={"engine": "codex", "baseUrl": None, "apiKey": ""}).json()
+    codex = {e["key"]: e for e in body["engines"]}["codex"]
+    assert codex["baseUrl"] is None and not codex["keySet"], "空地址 / 空 key 是清除"
+    assert client.put(API + "/settings/llm", json={"engine": "codex", "baseUrl": "api.example.com"}).status_code == 400
+
+
+def test_codex_with_panel_endpoint_uses_own_home(settings, tmp_path, monkeypatch):
+    """配了接口地址：生成后端自己的 CODEX_HOME，key 走环境变量，不带 ~/.codex 的覆盖项。"""
+    log = tmp_path / "run.json"
+    exe = fake_cli(tmp_path, "codex", f"""import json, os, sys
+home = os.environ.get("CODEX_HOME")
+json.dump({{"argv": sys.argv[1:], "home": home, "key": os.environ.get("PWB_CODEX_API_KEY"),
+           "config": open(home + "/config.toml").read() if home else None}}, open({str(log)!r}, "w"))
+open(sys.argv[sys.argv.index("--output-last-message") + 1], "w").write('{{"ok": 3}}')
+""")
+    monkeypatch.setenv("PWB_CODEX_BIN", str(exe))
+    llm.set_engine_key(settings, "codex", "sk-own")
+    config = {"engine": "codex", "models": {"codex": "gpt-5"}, "endpoints": {"codex": "https://api.example.com/v1"}}
+    assert llm.complete_json(settings, config, "s", "p", {"type": "object"}) == {"ok": 3}
+    seen = json.loads(log.read_text())
+    assert seen["home"] == str(settings.data_dir / "codex-home") and seen["key"] == "sk-own"
+    assert 'base_url = "https://api.example.com/v1"' in seen["config"] and 'wire_api = "responses"' in seen["config"]
+    assert 'env_key = "PWB_CODEX_API_KEY"' in seen["config"] and 'model = "gpt-5"' in seen["config"] and "sk-own" not in seen["config"]
+    assert "--disable" not in seen["argv"], "自己的目录里没有插件，不用覆盖"
+    llm.set_engine_key(settings, "codex", "")
+    with pytest.raises(llm.LLMError, match="API key"):
+        llm.complete_json(settings, config, "s", "p", {"type": "object"})
+
+
+def test_claude_code_with_panel_key_uses_own_config(settings, tmp_path, monkeypatch):
+    log = tmp_path / "env.json"
+    exe = fake_cli(tmp_path, "claude", f"""import json, os, sys
+sys.stdin.read()
+json.dump({{k: os.environ.get(k) for k in ("ANTHROPIC_BASE_URL", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CONFIG_DIR")}}, open({str(log)!r}, "w"))
+print(json.dumps({{"subtype": "success", "structured_output": {{"ok": 4}}}}))
+""")
+    monkeypatch.setenv("PWB_CLAUDE_BIN", str(exe))
+    config = {"engine": "claude-code", "models": {}, "endpoints": {"claude-code": "https://gw.example.com"}}
+    llm.set_engine_key(settings, "claude-code", "sk-cc")
+    assert llm.complete_json(settings, config, "s", "p", {"type": "object"}) == {"ok": 4}
+    env = json.loads(log.read_text())
+    assert env == {"ANTHROPIC_BASE_URL": "https://gw.example.com", "ANTHROPIC_API_KEY": "sk-cc", "ANTHROPIC_AUTH_TOKEN": "sk-cc",
+                   "CLAUDE_CONFIG_DIR": str(settings.data_dir / "claude-home")}
+
+
+def _models_server(seen):
+    class H(BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append((self.path, self.headers.get("Authorization"), self.headers.get("x-api-key")))
+            body = json.dumps({"data": [{"id": "m-b"}, {"id": "m-a"}]}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):
+            pass
+    server = HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def test_list_models_per_engine(client, settings, tmp_path, monkeypatch):
+    """面板里选模型：向引擎的接口拉；拉不到不报错，写原因并给内置常用名。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    seen = []
+    server = _models_server(seen)
+    base = "http://127.0.0.1:%d" % server.server_port
+    try:
+        client.put(API + "/settings/llm", json={"engine": "codex", "baseUrl": base + "/v1", "apiKey": "sk-c"})
+        body = assert_contract(client.get(API + "/settings/llm/models?engine=codex").json(), "llm-models")
+        assert [m["id"] for m in body["items"]] == ["m-a", "m-b"] and body["source"] == "api"
+        assert seen[-1] == ("/v1/models", "Bearer sk-c", None)
+        client.put(API + "/settings/llm", json={"engine": "claude-code", "baseUrl": base, "apiKey": "sk-a", "select": False})
+        body = client.get(API + "/settings/llm/models?engine=claude-code").json()
+        assert [m["id"] for m in body["items"]] == ["m-a", "m-b"] and seen[-1] == ("/v1/models", "Bearer sk-a", "sk-a")
+    finally:
+        server.shutdown()
+        server.server_close()
+    body = client.get(API + "/settings/llm/models?engine=claude-code").json()
+    assert body["source"] == "builtin" and "拉取失败" in body["message"] and {"opus", "sonnet", "haiku"} == {m["id"] for m in body["items"]}
+    body = assert_contract(client.get(API + "/settings/llm/models?engine=deepseek").json(), "llm-models")
+    assert body["source"] == "builtin" and "deepseek-chat" in [m["id"] for m in body["items"]] and "没有 API key" in body["message"]
+    assert client.get(API + "/settings/llm/models?engine=gpt").status_code in (400, 422)
+
+
+def test_reasoning_effort_setting_and_use(client, settings, tmp_path, monkeypatch):
+    body = assert_contract(client.put(API + "/settings/llm", json={"engine": "codex", "effort": "high"}).json(), "llm-settings")
+    engines = {e["key"]: e for e in body["engines"]}
+    assert engines["codex"]["effort"] == "high" and "xhigh" in engines["codex"]["effortOptions"] and engines["deepseek"]["effortOptions"] == []
+    assert client.put(API + "/settings/llm", json={"engine": "deepseek", "effort": "high"}).status_code == 400, "不支持的引擎"
+    assert client.put(API + "/settings/llm", json={"engine": "codex", "effort": "turbo"}).status_code == 400
+    assert {e["key"]: e for e in client.put(API + "/settings/llm", json={"engine": "codex", "effort": None}).json()["engines"]}["codex"]["effort"] is None
+    log = tmp_path / "argv.json"
+    exe = fake_cli(tmp_path, "claude", f"""import json, sys
+sys.stdin.read()
+json.dump(sys.argv[1:], open({str(log)!r}, "w"))
+print(json.dumps({{"subtype": "success", "structured_output": {{"ok": 5}}}}))
+""")
+    monkeypatch.setenv("PWB_CLAUDE_BIN", str(exe))
+    llm.complete_json(settings, {"engine": "claude-code", "models": {}, "efforts": {"claude-code": "xhigh"}}, "s", "p", {"type": "object"})
+    argv = json.loads(log.read_text())
+    assert argv[argv.index("--effort") + 1] == "xhigh"
+    assert 'model_reasoning_effort="medium"' in llm._codex_overrides("medium") and 'model_reasoning_effort="low"' in llm._codex_overrides()
+
+
+def test_list_models_from_local_cli_menus(client, settings, tmp_path, monkeypatch):
+    """没配接口地址 / key（用本机登录）：模型列表取自命令行自己的 /model 选单，不写死。"""
+    claude = fake_cli(tmp_path, "claude", """import json, sys
+req = json.loads(sys.stdin.readline())
+assert req["request"]["subtype"] == "initialize"
+models = [{"value": "default", "displayName": "Default"},
+          {"value": "claude-x-1[1m]", "displayName": "X 1", "description": "me@example.com", "supportedEffortLevels": ["low", "high"]},
+          {"value": "opus", "displayName": "Opus alias"}]
+print(json.dumps({"type": "system"}))
+print(json.dumps({"type": "control_response", "response": {"subtype": "success", "request_id": req["request_id"], "response": {"models": models, "account": {"email": "me@example.com"}}}}))
+sys.stdout.flush()
+sys.stdin.read()
+""")
+    codex = fake_cli(tmp_path, "codex", """import json, sys
+assert sys.argv[1:3] == ["debug", "models"]
+print(json.dumps({"models": [
+    {"slug": "g-1", "display_name": "G 1", "visibility": "list", "supported_reasoning_levels": [{"effort": "low"}, {"effort": "ultra"}]},
+    {"slug": "hidden", "visibility": "hide"}]}))
+""")
+    monkeypatch.setenv("PWB_CLAUDE_BIN", str(claude))
+    monkeypatch.setenv("PWB_CODEX_BIN", str(codex))
+    body = assert_contract(client.get(API + "/settings/llm/models?engine=claude-code").json(), "llm-models")
+    assert body["source"] == "cli" and body["items"] == [
+        {"id": "claude-x-1[1m]", "label": "X 1", "efforts": ["low", "high"]}, {"id": "opus", "label": "Opus alias", "efforts": []}]
+    assert "me@example.com" not in json.dumps(body), "账号信息不能带出来"
+    body = assert_contract(client.get(API + "/settings/llm/models?engine=codex").json(), "llm-models")
+    assert body["source"] == "cli" and body["items"] == [{"id": "g-1", "label": "G 1", "efforts": ["low", "ultra"]}]
+    monkeypatch.setenv("PWB_CODEX_BIN", str(tmp_path / "none"))
+    body = client.get(API + "/settings/llm/models?engine=codex").json()
+    assert body["items"] == [] and "没找到 codex" in body["message"]

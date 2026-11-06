@@ -1,4 +1,8 @@
 {
-  "engine": "deepseek",
-  "model": "deepseek-reasoner"
+  "engine": "codex",
+  "model": "gpt-5",
+  "baseUrl": "https://api.example.com/v1",
+  "apiKey": "（示例）sk-...",
+  "select": true,
+  "effort": "medium"
 }

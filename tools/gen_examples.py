@@ -281,9 +281,9 @@ write(R + "task.json", TASK)
 write(R + "task-list.json", {**resp("task-list", False), "items": [{**TASK, "status": "running", "message": "",
     "progress": {"done": 2, "total": 5, "message": "正在读第 3 节"}, "outputs": []}]})
 write(R + "llm-settings.json", {**resp("llm-settings", False), "engine": "claude-code", "updatedAt": None, "engines": [
-    {"key": "claude-code", "name": "Claude Code（本机命令行）", "ready": True, "detail": "/Users/me/.local/bin/claude", "model": None, "defaultModel": None},
-    {"key": "codex", "name": "Codex CLI（本机命令行）", "ready": False, "detail": "没找到 codex 命令；安装 Codex CLI，或用 PWB_CODEX_BIN 指定路径", "model": None, "defaultModel": None},
-    {"key": "deepseek", "name": "DeepSeek API", "ready": False, "detail": "没有 API key；设置环境变量 DEEPSEEK_API_KEY，或写入 data/secrets.json 的 deepseekApiKey", "model": "deepseek-chat", "defaultModel": "deepseek-chat"}]})
+    {"key": "claude-code", "name": "Claude Code（本机命令行）", "ready": True, "detail": "/Users/me/.local/bin/claude", "model": None, "defaultModel": None, "baseUrl": None, "keySet": False, "effort": None, "effortOptions": ["low", "medium", "high", "xhigh", "max"]},
+    {"key": "codex", "name": "Codex CLI（本机命令行）", "ready": False, "detail": "没找到 codex 命令；安装 Codex CLI，或用 PWB_CODEX_BIN 指定路径", "model": None, "defaultModel": None, "baseUrl": None, "keySet": False, "effort": None, "effortOptions": ["minimal", "low", "medium", "high", "xhigh", "max"]},
+    {"key": "deepseek", "name": "DeepSeek API", "ready": False, "detail": "没有 API key；在这里填，或设置环境变量 DEEPSEEK_API_KEY", "model": "deepseek-chat", "defaultModel": "deepseek-chat", "baseUrl": None, "keySet": False, "effort": None, "effortOptions": []}]})
 write(R + "error.json", {**resp("error", False), "error": {"code": "not_found", "message": "论文不存在：arxiv-2610.99999"}})
 
 B = "bodies/"
@@ -303,7 +303,8 @@ write(B + "interests-extraction.json", {"overview": "（示例）关注多智能
     "domains": [{"label": "多智能体系统", "summary": "示例一级关键词", "evidence": [ev_maas], "children": [
         {"label": "多智能体架构搜索", "summary": "示例二级关键词", "evidence": [ev_maas], "children": [
             {"label": "查询自适应的超网采样", "summary": "示例三级关键词", "evidence": [ev_maas]}]}]}]})
-write(B + "llm-settings-put.json", {"engine": "deepseek", "model": "deepseek-reasoner"})
+write(B + "llm-settings-put.json", {"engine": "codex", "model": "gpt-5", "baseUrl": "https://api.example.com/v1", "apiKey": "（示例）sk-...", "select": True, "effort": "medium"})
+write(R + "llm-models.json", {**resp("llm-models", False), "engine": "codex", "items": [{"id": "gpt-5", "label": "GPT-5", "efforts": ["low", "medium", "high"]}, {"id": "gpt-5-mini", "label": "", "efforts": []}], "source": "api", "message": ""})
 write(B + "scheme-create.json", {"name": "MAS 的生成方式", "scope": {"kind": "topic", "value": "多智能体架构的编排优化"}, "multi": False,
     "categories": [{"name": "用神经网络生成 MAS", "description": "训练策略网络、图生成模型或 GNN 来产生架构"},
                    {"name": "用 LLM 生成 MAS", "description": "由 LLM 通过提示或写代码直接给出架构"}]})

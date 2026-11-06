@@ -73,6 +73,35 @@
                     "type": "null"
                   }
                 ]
+              },
+              "baseUrl": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "keySet": {
+                "type": "boolean"
+              },
+              "effort": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "effortOptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "required": [
@@ -81,7 +110,11 @@
               "ready",
               "detail",
               "model",
-              "defaultModel"
+              "defaultModel",
+              "baseUrl",
+              "keySet",
+              "effort",
+              "effortOptions"
             ]
           }
         }

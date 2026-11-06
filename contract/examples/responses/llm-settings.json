@@ -10,7 +10,17 @@
       "ready": true,
       "detail": "/Users/me/.local/bin/claude",
       "model": null,
-      "defaultModel": null
+      "defaultModel": null,
+      "baseUrl": null,
+      "keySet": false,
+      "effort": null,
+      "effortOptions": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
     },
     {
       "key": "codex",
@@ -18,15 +28,30 @@
       "ready": false,
       "detail": "没找到 codex 命令；安装 Codex CLI，或用 PWB_CODEX_BIN 指定路径",
       "model": null,
-      "defaultModel": null
+      "defaultModel": null,
+      "baseUrl": null,
+      "keySet": false,
+      "effort": null,
+      "effortOptions": [
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
     },
     {
       "key": "deepseek",
       "name": "DeepSeek API",
       "ready": false,
-      "detail": "没有 API key；设置环境变量 DEEPSEEK_API_KEY，或写入 data/secrets.json 的 deepseekApiKey",
+      "detail": "没有 API key；在这里填，或设置环境变量 DEEPSEEK_API_KEY",
       "model": "deepseek-chat",
-      "defaultModel": "deepseek-chat"
+      "defaultModel": "deepseek-chat",
+      "baseUrl": null,
+      "keySet": false,
+      "effort": null,
+      "effortOptions": []
     }
   ]
 }

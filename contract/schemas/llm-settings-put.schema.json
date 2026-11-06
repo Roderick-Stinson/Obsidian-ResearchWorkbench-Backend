@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://paper-workbench.local/schemas/llm-settings-put.schema.json",
-  "title": "切换大模型引擎",
+  "title": "设置大模型引擎",
   "type": "object",
   "properties": {
     "engine": {
@@ -12,6 +12,32 @@
       ]
     },
     "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "baseUrl": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "apiKey": {
+      "type": "string"
+    },
+    "select": {
+      "type": "boolean"
+    },
+    "effort": {
       "anyOf": [
         {
           "type": "string"

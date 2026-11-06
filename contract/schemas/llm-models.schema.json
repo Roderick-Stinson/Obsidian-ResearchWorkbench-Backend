@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paper-workbench.local/schemas/llm-models.schema.json",
+  "title": "引擎可选的模型",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/Response"
+    },
+    {
+      "properties": {
+        "kind": {
+          "const": "llm-models"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "engine": {
+          "enum": [
+            "claude-code",
+            "codex",
+            "deepseek"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Text"
+              },
+              "label": {
+                "type": "string"
+              },
+              "efforts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "efforts"
+            ]
+          }
+        },
+        "source": {
+          "enum": [
+            "api",
+            "cli",
+            "builtin"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "engine",
+        "items",
+        "source",
+        "message"
+      ]
+    }
+  ]
+}

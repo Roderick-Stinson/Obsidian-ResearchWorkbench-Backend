@@ -332,7 +332,11 @@ responses = {
     "llm-settings": ("大模型引擎设置", obj({
         "engine": enum(*LLM_ENGINES), "updatedAt": nullable(DT),
         "engines": arr(obj({"key": enum(*LLM_ENGINES), "name": TEXT, "ready": BOOL, "detail": STR,
-                            "model": nullable(STR), "defaultModel": nullable(STR)}))}), False),
+                            "model": nullable(STR), "defaultModel": nullable(STR),
+                            "baseUrl": nullable(STR), "keySet": BOOL,
+                            "effort": nullable(STR), "effortOptions": arr(STR)}))}), False),
+    "llm-models": ("引擎可选的模型", obj({"engine": enum(*LLM_ENGINES), "items": arr(obj({"id": TEXT, "label": STR, "efforts": arr(STR)})),
+                                         "source": enum("api", "cli", "builtin"), "message": STR}), False),
     "recommend-settings": ("每日推荐设置", obj({**{k: closed(v, optional=()) for k, v in REC_SETTINGS.items()}, "updatedAt": nullable(DT),
         "streams": arr(obj({"key": TEXT, "name": TEXT, "query": TEXT})), "profileProblem": nullable(STR)}), False),
     "task": ("后台任务", TASK, False),
@@ -360,7 +364,9 @@ bodies = {
     "interest-node-patch": ("修改关键词", closed({"label": TEXT, "summary": STR}, minProperties=1)),
     "interests-extraction": ("一次关键词整理结果", obj({"overview": TEXT, "basis": BASIS,
                                                     "domains": arr(extraction_node(1), minItems=1)})),
-    "llm-settings-put": ("切换大模型引擎", closed({"engine": enum(*LLM_ENGINES), "model": nullable(STR)}, optional=("model",))),
+    "llm-settings-put": ("设置大模型引擎", closed({"engine": enum(*LLM_ENGINES), "model": nullable(STR), "baseUrl": nullable(STR),
+                                              "apiKey": STR, "select": BOOL, "effort": nullable(STR)},
+                                             optional=("model", "baseUrl", "apiKey", "select", "effort"))),
     "scheme-create": ("新建分类方案", closed({
         "name": TEXT, "scope": SCHEME_SCOPE, "multi": BOOL,
         "categories": arr(closed({"id": TEXT, "name": TEXT, "description": STR}, optional=("id", "description")), minItems=2, maxItems=20)},

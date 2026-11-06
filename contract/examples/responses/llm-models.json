@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "llm-models",
+  "engine": "codex",
+  "items": [
+    {
+      "id": "gpt-5",
+      "label": "GPT-5",
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    {
+      "id": "gpt-5-mini",
+      "label": "",
+      "efforts": []
+    }
+  ],
+  "source": "api",
+  "message": ""
+}

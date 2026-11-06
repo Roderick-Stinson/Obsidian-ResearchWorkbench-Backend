@@ -74,7 +74,7 @@ python3 -m venv .venv
    | `venues` | 领域检索、核实中稿 | 只用内置会议 / 期刊清单（CCF-A 等，见 `pwb/survey.py` 的 `VENUES`）里的哪些，写简称列表；`null` 或不写就全用 |
    | `venuesExtra` | 同上 | 清单以外的会议 / 期刊：`{"简称": {"names": ["Semantic Scholar 里的全称"], "kind": "proceedings" 或 "journal"}}`（DBLP 核实只支持内置清单） |
 
-3. **准备大模型**：默认用本机 Claude Code，装好后运行一次 `claude` 登录即可，不需要配置文件。用 DeepSeek 的话，写 `data/secrets.json`：`{"deepseekApiKey": "sk-..."}`，再在面板“设置 → 大模型引擎”里切换。
+3. **准备大模型**：默认用本机 Claude Code，装好后运行一次 `claude` 登录即可，不需要配置文件。想用别的引擎、或用自己的 API 和 key，在面板“设置 → 大模型引擎”里配：每个引擎（Claude Code / Codex / DeepSeek）都能单独填接口地址、模型和 API key，填了就和你日常用的命令行配置完全分开。模型不用手打：点「拉取模型」选。没配接口和 key（用本机登录）时，列表就是你在 Claude Code / Codex 里敲 `/model` 看到的那份；配了就向你的接口拉。选模型时思考强度的选项会跟着模型变（Claude Code、Codex 支持）。Codex 走 `/v1/responses`，后端自己生成配置；key 只存后端 `data/secrets.json`，面板读不回来。也可以不用面板：DeepSeek 写 `data/secrets.json` 的 `{"deepseekApiKey": "sk-..."}`。
 4. **启动后端**：`.venv/bin/python -m pwb serve`（占着一个终端）。想让它登录后自动启动、不用每次手动开，见[开机自启](#开机自启)。
 5. **装面板**：见[面板仓库](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)的 README。后端不在默认地址时，在面板“设置 → 后端连接”里改。
 6. **写下研究领域**：面板“我的研究领域” → “添加一级领域”，写你的大方向（说明里写清楚包括什么、不包括什么）。
@@ -142,9 +142,22 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 
 整理关键词、每日初筛和速读等需要大模型的工作，用哪个引擎在面板“设置 → 大模型引擎”里切换（默认本机 Claude Code）。
 
-- **Claude Code**：调用本机 `claude -p`，用你已登录的账号（不需要 API key）。在临时空目录里运行，不给任何工具，只读给它的材料、输出 JSON。
-- **Codex CLI**：调用本机 `codex exec`（只读沙箱）。
+- **Claude Code**：调用本机 `claude -p`，默认用你已登录的账号（不需要 API key）。在临时空目录里运行，不给任何工具，只读给它的材料、输出 JSON。
+- **Codex CLI**：调用本机 `codex exec`（只读沙箱）。默认读你日常的 `~/.codex`，调用时关掉插件、MCP 和提醒钩子、推理强度用 low，免得桌面版 Codex 的配置拖慢调用。
 - **DeepSeek**：调用 DeepSeek 的 chat completions 接口。
+
+每个引擎都能在面板里单独配，和你日常用的命令行配置分开：
+
+| 在面板里填 | Claude Code | Codex CLI | DeepSeek |
+|---|---|---|---|
+| 接口地址 | `ANTHROPIC_BASE_URL` | 后端在 `data/codex-home/config.toml` 里生成自己的配置（自定义 provider，走 `/v1/responses`），用 `CODEX_HOME` 指过去 | 替换官方地址 |
+| API key | 填了就改用这个 key（并用后端自己的配置目录 `data/claude-home`，不读你的登录和设置） | 通过环境变量 `PWB_CODEX_API_KEY` 交给 Codex，不写进配置文件 | Bearer token |
+| 模型 | 下拉选，或手动输入 | 同左 | 同左 |
+| 思考强度 | low / medium / high / xhigh / max | minimal … ultra | 不支持 |
+
+- **key 只写不读**：保存在后端 `data/secrets.json`（权限 600），面板和接口都读不回来，只显示“已保存”。不想用面板的话，也可以直接写这个文件（`claudeCodeApiKey` / `codexApiKey` / `deepseekApiKey`），DeepSeek 还认环境变量 `DEEPSEEK_API_KEY`。
+- **模型下拉**：点“拉取模型”。没配接口和 key（用本机登录）时，列表是你在 Claude Code / Codex 里敲 `/model` 看到的那份（Claude Code 靠 `initialize` 控制请求，Codex 靠 `codex debug models`，都不调用模型）；配了就向你的接口拉（`<地址>/models`）。拉不到会写原因，也可以手动输入模型名。选了模型，思考强度的选项会换成这个模型支持的。
+- **Codex 填了接口地址**就必须填 key，接口要支持 `/v1/responses`。
 
 不管用哪个引擎，结果都会先按约定校验，再逐条核对原文摘录确实出自论文；对不上的让模型重写一次，仍对不上就去掉摘录、只保留论文出处。
 
