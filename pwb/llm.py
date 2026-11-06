@@ -8,6 +8,7 @@
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -100,6 +101,18 @@ def _claude_code(system, prompt, schema, model, settings):
     return _parse_json(out.get("result") or "", "Claude Code")
 
 
+def _codex_overrides():
+    """后端只要“读材料、出 JSON”，不需要你桌面版 Codex 配置里的东西，它们还会拖慢甚至卡住调用：
+    插件和 MCP 服务启动时要联网（直连 chatgpt.com 不通的网络下一直重连）、提醒钩子、high 推理强度。
+    MCP 服务名从 ~/.codex/config.toml 里读。"""
+    cfg = Path.home() / ".codex" / "config.toml"
+    text = cfg.read_text(encoding="utf-8", errors="replace") if cfg.exists() else ""
+    out = ["--disable", "plugins", "--disable", "apps", "-c", "notify=[]", "-c", 'model_reasoning_effort="low"']
+    for name in dict.fromkeys(re.findall(r"^\[mcp_servers\.([A-Za-z0-9_-]+)\]", text, re.M)):
+        out += ["-c", "mcp_servers.{}.enabled=false".format(name)]
+    return out
+
+
 def _codex(system, prompt, schema, model, settings):
     exe = find_bin("codex", "PWB_CODEX_BIN")
     if not exe:
@@ -107,7 +120,7 @@ def _codex(system, prompt, schema, model, settings):
     with tempfile.TemporaryDirectory(prefix="pwb-llm-") as cwd:
         schema_file, answer_file = Path(cwd) / "schema.json", Path(cwd) / "answer.json"
         schema_file.write_text(json.dumps(schema, ensure_ascii=False), encoding="utf-8")
-        cmd = [exe, "exec", "--skip-git-repo-check", "--sandbox", "read-only",
+        cmd = [exe, "exec", "--skip-git-repo-check", "--ephemeral", "--sandbox", "read-only", *_codex_overrides(),
                "--output-schema", str(schema_file), "--output-last-message", str(answer_file)]
         if model:
             cmd += ["--model", model]

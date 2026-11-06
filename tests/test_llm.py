@@ -220,3 +220,16 @@ def test_sources_without_pdf_use_abstract(watched):
     no_pdf = next(s for s in sources if s["ref"] == "arxiv-2005.11401")
     assert not no_pdf["hasPdf"] and "We explore retrieval." in no_pdf["text"]
     assert all(s["hasPdf"] for s in sources if s["ref"] != "arxiv-2005.11401")
+
+
+def test_codex_overrides_follow_user_config(tmp_path, monkeypatch):
+    """关掉插件、MCP，推理强度调低；MCP 服务名照抄 config.toml。"""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / ".codex").mkdir()
+    (tmp_path / ".codex" / "config.toml").write_text(
+        '[mcp_servers.node_repl]\ncommand = "x"\n[mcp_servers.node_repl.env]\nA = "1"\n', encoding="utf-8")
+    args = llm._codex_overrides()
+    assert args.count("mcp_servers.node_repl.enabled=false") == 1
+    assert ["--disable", "plugins"] == args[:2] and 'model_reasoning_effort="low"' in args
+    monkeypatch.setenv("HOME", str(tmp_path / "none"))
+    assert "--disable" in llm._codex_overrides(), "没有 config.toml 也不报错"
