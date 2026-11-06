@@ -25,6 +25,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 ENGINES = {
     "claude-code": {"name": "Claude Code（本机命令行）", "defaultModel": None, "keyName": "claudeCodeApiKey"},
     "codex": {"name": "Codex CLI（本机命令行）", "defaultModel": None, "keyName": "codexApiKey"},
@@ -249,11 +251,30 @@ def get_config(store):
     return {"engine": engine, "models": models, "endpoints": endpoints, "efforts": efforts, "updatedAt": saved.get("updatedAt")}
 
 
+SCHEMA_TRIES = 3
+
+
+def _schema_problems(data, schema):
+    """输出不符合 schema 的地方（最多三条，写成能直接发给模型的话）；符合返回空列表。"""
+    errors = sorted(Draft202012Validator(schema).iter_errors(data), key=lambda e: list(map(str, e.path)))
+    return ["{}：{}".format("/".join(map(str, e.path)) or "最外层", e.message[:160]) for e in errors[:3]]
+
+
 def complete_json(settings, config, system, prompt, schema):
-    """按当前设置调用引擎，返回解析好的 JSON 对象（是否符合约定由调用方校验）。"""
+    """按当前设置调用引擎，返回解析好的 JSON 对象，并按 schema 校验。
+    引擎不一定遵守传进去的 schema（自己配的接口常常忽略，会返回字段名、类型、层级不对的 JSON），
+    不符合就把问题告诉模型、让它重写，最多试 SCHEMA_TRIES 次，仍不符合才报错。"""
     engine = config["engine"]
-    return CALLERS[engine](system, prompt, schema, config["models"].get(engine), settings,
-                           (config.get("endpoints") or {}).get(engine), (config.get("efforts") or {}).get(engine))
+    ask = prompt
+    for attempt in range(SCHEMA_TRIES):
+        data = CALLERS[engine](system, ask, schema, config["models"].get(engine), settings,
+                               (config.get("endpoints") or {}).get(engine), (config.get("efforts") or {}).get(engine))
+        problems = _schema_problems(data, schema)
+        if not problems:
+            return data
+        ask = prompt + "\n\n你上一次的输出不符合要求的 JSON Schema：{}。请重新输出，字段名、类型、层级都严格按 schema，只输出 JSON。".format("；".join(problems))
+    raise LLMError("{} 连续 {} 次输出都不符合格式：{}".format(ENGINES[engine]["name"], SCHEMA_TRIES, "；".join(problems)))
+
 
 def _get_json(url, headers):
     req = urllib.request.Request(url, headers={"User-Agent": "paper-workbench/0.1", **headers})

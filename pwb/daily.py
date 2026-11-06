@@ -629,12 +629,19 @@ def _cache_pdf(store, arxiv_id):
     return path
 
 
+def _quality_num(v):
+    """quality 应该是数字；有的模型会写成 {"score": 8, ...} 或 "8"，都认。"""
+    if isinstance(v, dict):
+        v = v.get("score")
+    return float(v)
+
+
 def _apply_skim(cand, x, full):
     code = (cand["data"].get("hf") or {}).get("github") or x.get("codeUrl") or None
     if code and not GITHUB.match(code) and not code.startswith("http"):
         code = None
     cand["result"]["skim"] = {"titleZh": x["titleZh"].strip() or cand["data"]["title"], "summary": x["summary"].strip(),
-                              "quality": {"score": max(0.0, min(10.0, float(x["quality"]))), "rationale": x.get("rationale", "")},
+                              "quality": {"score": max(0.0, min(10.0, _quality_num(x["quality"]))), "rationale": x.get("rationale", "")},
                               "codeUrl": code, "fullText": full,
                               "institutions": [i.strip() for i in x.get("institutions") or [] if isinstance(i, str) and i.strip()][:5]}
 

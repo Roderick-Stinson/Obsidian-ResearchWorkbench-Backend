@@ -120,7 +120,16 @@ def suggest_schemes(store, params, progress):
     return msg, [{"kind": "data", "path": "/schemes/suggestions"}]
 
 
-HANDLERS = {"claim-run": claim_run, "rebuild-affiliations": rebuild_affiliations, "classify-scheme": classify_scheme,
+def deep_read(store, params, progress):
+    """读论文全文，写一份精读笔记（见 deepread.py）。"""
+    from . import deepread, llm
+    try:
+        return deepread.generate(store, llm.get_config(store), params["paperId"], progress)
+    except (llm.LLMError, ValueError) as e:
+        raise TaskFailed(str(e))
+
+
+HANDLERS = {"claim-run": claim_run, "deep-read": deep_read, "rebuild-affiliations": rebuild_affiliations, "classify-scheme": classify_scheme,
             "suggest-schemes": suggest_schemes, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map,
             "run-daily": run_daily, "retry-step": retry_step}
 

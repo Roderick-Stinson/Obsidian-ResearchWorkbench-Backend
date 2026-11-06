@@ -385,3 +385,71 @@ print(json.dumps({"models": [
     monkeypatch.setenv("PWB_CODEX_BIN", str(tmp_path / "none"))
     body = client.get(API + "/settings/llm/models?engine=codex").json()
     assert body["items"] == [] and "没找到 codex" in body["message"]
+
+
+def test_complete_json_retries_until_schema_matches(settings, tmp_path, monkeypatch):
+    """引擎不遵守 schema（自己配的接口常见）：把问题告诉模型重写，最多三次；仍不符合才报错。"""
+    calls = tmp_path / "calls.json"
+    exe = fake_cli(tmp_path, "claude", f"""import json, os, sys
+prompt = sys.stdin.read()
+n = len(json.load(open({str(calls)!r}))) if os.path.exists({str(calls)!r}) else 0
+json.dump(json.load(open({str(calls)!r})) + [prompt] if n else [prompt], open({str(calls)!r}, "w"))
+out = {{"quality": {{"score": 8}}}} if n < 1 else {{"quality": 8}}
+print(json.dumps({{"subtype": "success", "structured_output": out}}))
+""")
+    monkeypatch.setenv("PWB_CLAUDE_BIN", str(exe))
+    schema = {"type": "object", "required": ["quality"], "properties": {"quality": {"type": "number"}}}
+    config = {"engine": "claude-code", "models": {}}
+    assert llm.complete_json(settings, config, "s", "原问题", schema) == {"quality": 8}
+    asked = json.loads(calls.read_text())
+    assert len(asked) == 2 and "不符合" in asked[1] and "quality" in asked[1] and asked[1].startswith("原问题")
+    calls.unlink()
+    always_bad = {"type": "object", "required": ["x"], "properties": {"x": {"type": "string"}}}
+    with pytest.raises(llm.LLMError, match="连续 3 次"):
+        llm.complete_json(settings, config, "s", "p", always_bad)
+    assert len(json.loads(calls.read_text())) == 3
+
+
+def test_deep_read_task_writes_note_body(client, store, tmp_path, monkeypatch):
+    """一键精读：读全文、按模板结构写笔记正文；摘录对原文核对，对不上的标 ⚠；“和我的研究的关系”等三节留空。"""
+    from pwb import deepread, extraction, rebuild
+    store.upsert_paper({"id": MAAS, "title": "Multi-agent Architecture Search via Agentic Supernet", "authors": ["A", "B"], "publicationStatus": "已发表",
+                        "summary": "", "urls": {"source": "https://openreview.net/forum?id=imcyVlzpXh", "pdf": None, "code": None}}, pdf_file=MAAS + ".pdf")
+    (store.settings.pdf_dir / (MAAS + ".pdf")).write_bytes(b"%PDF fake")
+    body = "MaAS samples query-dependent agentic systems from the supernet. " * 60
+    monkeypatch.setattr(rebuild, "_pdf_head", lambda path, limit=0: body)
+    monkeypatch.setattr(extraction, "_pdf_text", lambda path, mtime: extraction._normalize(body))
+    seen = {}
+    good = {"oneLine": "按查询从超网采样。", "task": "t", "problem": "p", "rootCause": "r", "naive": "n", "idea": "i", "mainResults": "m", "worthDeep": "w",
+            "related": [{"category": "手工", "idea": "固定", "representative": "X | Y", "missing": "不随查询变"}], "framework": "输入 → 超网 → 输出",
+            "modules": [{"name": "超网", "description": "对应 R"}], "formulas": [{"label": "式 (1)", "latex": "$$a=b$$", "meaning": "a 是 b", "why": "简单"}],
+            "claims": [{"claim": "有效", "setup": "GSM8K", "result": "+3 (Tab. 1)", "verdict": "站得住", "quote": "samples query-dependent agentic systems"},
+                       {"claim": "省钱", "setup": "x", "result": "-50%", "verdict": "未验证", "quote": "this sentence is not in the paper"}],
+            "datasets": "GSM8K", "baselines": "AFlow", "metrics": "acc", "limitations": ["只测了数学"]}
+    monkeypatch.setattr(llm, "complete_json", lambda settings, config, system, prompt, schema: seen.update(prompt=prompt) or good)
+    res = client.post(API + "/tasks", json={"type": "deep-read", "params": {"paperId": MAAS}}, headers={"Idempotency-Key": "dr-1"})
+    assert res.status_code == 202, res.text
+    run_task(store, store.get_task(res.json()["id"]))
+    task = store.get_task(res.json()["id"])
+    assert task["status"] == "done" and "1 条核对通过" in task["message"] and "1 条没核对到" in task["message"], task
+    d = assert_contract(client.get(API + "/papers/" + MAAS + "/deep-read").json(), "deep-read")
+    md = d["markdown"]
+    assert "Multi-agent Architecture Search" in seen["prompt"] and "<论文>" in seen["prompt"]
+    for heading in ("## 和我的研究的关系", "## 想法与疑问", "## 要追的论文", "## 粗读", "## 精读", "### 现有工作", "### 方法", "### 关键公式",
+                    "### Claims 与证据", "### 实验设置", "### 局限与可补的实验", "## 随手记"):
+        assert heading in md, heading
+    assert "- **I 本文 Idea**：i" in md and "$$\na=b\n$$" in md and "X \\| Y" in md, "公式去掉多余的 $，表格里的竖线转义"
+    assert "原文：「samples query-dependent agentic systems」" in md and "⚠ 摘录没在 PDF 里核对到" in md
+    assert "[!warning] AI 生成，待核实" in md and "status 改成粗读 / 精读" in md
+    assert md.split("## 和我的研究的关系")[1].split("## 想法与疑问")[0].count("%%") == 2 and "- \n\n## 要追的论文" in md, "三节留空"
+    assert d["sources"][0]["id"] == MAAS
+
+
+def test_deep_read_needs_pdf(client, store, monkeypatch):
+    from pwb import pdfs
+    store.upsert_paper({"id": MAAS, "title": "No Pdf Paper", "authors": [], "publicationStatus": "已发表", "summary": ""})
+    monkeypatch.setattr(pdfs, "fetch_one", lambda store, pid: {"status": "none"})
+    res = client.post(API + "/tasks", json={"type": "deep-read", "params": {"paperId": MAAS}}, headers={"Idempotency-Key": "dr-2"})
+    run_task(store, store.get_task(res.json()["id"]))
+    task = store.get_task(res.json()["id"])
+    assert task["status"] == "failed" and "上传 PDF" in task["error"]

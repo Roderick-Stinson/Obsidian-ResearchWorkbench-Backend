@@ -333,16 +333,18 @@ def test_pdf_upload_marks_interests_stale(client, seeded):
 
 def test_task_idempotency_and_not_implemented(client, seeded):
     headers = {"Idempotency-Key": "k1"}
-    first = client.post(API + "/tasks", json={"type": "deep-read", "params": {"paperId": "arxiv-2502.04180"}}, headers=headers)
+    first = client.post(API + "/tasks", json={"type": "generate-report", "params": {"type": "weekly", "period": {"start": "2026-10-19", "end": "2026-10-25"}}}, headers=headers)
     assert first.status_code == 202
     task = assert_contract(first.json(), "task")
-    assert task["params"]["paperId"] == MAAS, "别名换成主 ID"
-    second = client.post(API + "/tasks", json={"type": "deep-read", "params": {"paperId": MAAS}}, headers=headers)
+    second = client.post(API + "/tasks", json={"type": "generate-report", "params": {"type": "weekly", "period": {"start": "2026-10-19", "end": "2026-10-25"}}}, headers=headers)
     assert second.status_code == 200 and second.json()["id"] == task["id"]
     run_queued(seeded)
     done = get(client, "/tasks/" + task["id"])
     assert done["status"] == "failed" and "尚未实现" in done["error"]
     assert get(client, "/tasks?active=true")["items"] == []
+    # 放在最后、不执行：deep-read 会真的去下载 PDF 和调大模型
+    alias = client.post(API + "/tasks", json={"type": "deep-read", "params": {"paperId": "arxiv-2502.04180"}})
+    assert alias.json()["params"]["paperId"] == MAAS, "别名换成主 ID"
 
 
 def test_task_bad_params_are_400(client, seeded):
@@ -403,7 +405,7 @@ def test_cors_allows_obsidian_and_wraps_auth_errors(tmp_path):
 def test_overview_is_live_and_health_lists_task_types(client, seeded):
     body = get(client, "/overview")
     assert body["paperTotal"] == 4 and body["relevantTotal"] == 0 and body["lastIngestAt"]
-    assert get(client, "/health")["taskTypes"] == ["claim-run", "classify-scheme", "rebuild-affiliations", "rebuild-classics", "rebuild-interests", "rebuild-map", "retry-step", "run-daily", "suggest-schemes"]
+    assert get(client, "/health")["taskTypes"] == ["claim-run", "classify-scheme", "deep-read", "rebuild-affiliations", "rebuild-classics", "rebuild-interests", "rebuild-map", "retry-step", "run-daily", "suggest-schemes"]
 
 
 def test_jobs_report_pdf_download_and_dblp(client, seeded, settings):
