@@ -76,7 +76,7 @@ python3 -m venv .venv
 
 3. **准备大模型**：默认用本机 Claude Code，装好后运行一次 `claude` 登录即可，不需要配置文件。想用别的引擎、或用自己的 API 和 key，在面板“设置 → 大模型引擎”里配：每个引擎（Claude Code / Codex / DeepSeek）都能单独填接口地址、模型和 API key，填了就和你日常用的命令行配置完全分开。模型不用手打：点「拉取模型」选。没配接口和 key（用本机登录）时，列表就是你在 Claude Code / Codex 里敲 `/model` 看到的那份；配了就向你的接口拉。选模型时思考强度的选项会跟着模型变（Claude Code、Codex 支持）。Codex 走 `/v1/responses`，后端自己生成配置；key 只存后端 `data/secrets.json`，面板读不回来。也可以不用面板：DeepSeek 写 `data/secrets.json` 的 `{"deepseekApiKey": "sk-..."}`。
 4. **启动后端**：`.venv/bin/python -m pwb serve`（占着一个终端）。想让它登录后自动启动、不用每次手动开，见[开机自启](#开机自启)。
-5. **装面板**：见[面板仓库](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)的 README。后端不在默认地址时，在面板“设置 → 后端连接”里改。
+5. **装面板**：见[面板仓库](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)的 README。后端不在默认地址时，在面板“设置 → 后端连接”里改。面板总是自己重新加载的话，见面板仓库 README 的「常见问题」（关掉 Dataview 的自动刷新）。
 6. **写下研究领域**：面板“我的研究领域” → “添加一级领域”，写你的大方向（说明里写清楚包括什么、不包括什么）。
 7. **加几篇代表论文**：
    - 面板“关注论文” → “添加关注论文”，贴 arXiv 链接即可，后端会在后台补上标题、作者、摘要并下载 PDF；
