@@ -236,3 +236,23 @@ def test_queue_drops_read_papers(client, store):
     assert client.get(API + "/me/queue").json()["paperIds"] == [ids[1], ids[3]], "笔记粗读及以上的移出；还是待读的、只改了别的标记的留着"
     q = client.get(API + "/papers?queued=true").json()
     assert sorted(p["id"] for p in q["items"]) == [ids[1], ids[3]] and client.get(API + "/papers?queued=false").json()["total"] == 2
+
+
+def test_library_author_search(client, store):
+    """按作者搜：只看作者名（不看标题、摘要），去重音和标点，几个词要落在同一位作者身上。"""
+    def add(i, title, authors, abstract=""):
+        store.upsert_paper({"id": "arxiv-2501.0001%d" % i, "title": title, "authors": authors, "firstAuthor": authors[0] if authors else "",
+                            "publicationStatus": "已发表", "summary": "", "abstract": abstract})
+    add(1, "Agents", ["Guibin Zhang", "Wei Li"])
+    add(2, "Debate", ["Guibin Li", "Wei Zhang"])
+    add(3, "Zhang et al. method", ["Anna Müller"], abstract="by Guibin Zhang")
+    add(4, "No authors", [])
+    ids = lambda qs: sorted(p["id"][-1] for p in client.get(API + "/papers?" + qs).json()["items"])
+    assert ids("author=Guibin Zhang") == ["1"], "同一位作者"
+    assert ids("author=zhang, guibin") == ["1"], "大小写、逗号和词序不影响"
+    assert ids("author=Zhang") == ["1", "2"], "标题、摘要里的 Zhang 不算"
+    assert ids("author=muller") == ["3"], "去重音"
+    assert ids("author=Zhang&q=Debate") == ["2"], "和主题搜索可以叠加"
+    assert ids("author=%20%20") == ["1", "2", "3", "4"], "空白等于没筛"
+    body = client.get(API + "/papers?author=Zhang&facets=true").json()
+    assert body["total"] == 2 and sum(f["count"] for f in body["facets"]["reading"]) == 2, "分面跟着作者筛选走"

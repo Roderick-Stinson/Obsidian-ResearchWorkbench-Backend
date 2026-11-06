@@ -129,7 +129,16 @@ def deep_read(store, params, progress):
         raise TaskFailed(str(e))
 
 
-HANDLERS = {"claim-run": claim_run, "deep-read": deep_read, "rebuild-affiliations": rebuild_affiliations, "classify-scheme": classify_scheme,
+def generate_report(store, params, progress):
+    """周报 / 月报（见 report.py）。"""
+    from . import llm, report
+    try:
+        return report.generate(store, llm.get_config(store), params, progress)
+    except (llm.LLMError, ValueError) as e:
+        raise TaskFailed(str(e))
+
+
+HANDLERS = {"claim-run": claim_run, "deep-read": deep_read, "generate-report": generate_report, "rebuild-affiliations": rebuild_affiliations, "classify-scheme": classify_scheme,
             "suggest-schemes": suggest_schemes, "rebuild-interests": rebuild_interests, "rebuild-classics": rebuild_classics, "rebuild-map": rebuild_map,
             "run-daily": run_daily, "retry-step": retry_step}
 

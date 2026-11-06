@@ -333,10 +333,10 @@ def test_pdf_upload_marks_interests_stale(client, seeded):
 
 def test_task_idempotency_and_not_implemented(client, seeded):
     headers = {"Idempotency-Key": "k1"}
-    first = client.post(API + "/tasks", json={"type": "generate-report", "params": {"type": "weekly", "period": {"start": "2026-10-19", "end": "2026-10-25"}}}, headers=headers)
+    first = client.post(API + "/tasks", json={"type": "ingest-paper", "params": {"url": "https://arxiv.org/abs/2501.00001", "watch": False}}, headers=headers)
     assert first.status_code == 202
     task = assert_contract(first.json(), "task")
-    second = client.post(API + "/tasks", json={"type": "generate-report", "params": {"type": "weekly", "period": {"start": "2026-10-19", "end": "2026-10-25"}}}, headers=headers)
+    second = client.post(API + "/tasks", json={"type": "ingest-paper", "params": {"url": "https://arxiv.org/abs/2501.00001", "watch": False}}, headers=headers)
     assert second.status_code == 200 and second.json()["id"] == task["id"]
     run_queued(seeded)
     done = get(client, "/tasks/" + task["id"])
@@ -405,7 +405,7 @@ def test_cors_allows_obsidian_and_wraps_auth_errors(tmp_path):
 def test_overview_is_live_and_health_lists_task_types(client, seeded):
     body = get(client, "/overview")
     assert body["paperTotal"] == 4 and body["relevantTotal"] == 0 and body["lastIngestAt"]
-    assert get(client, "/health")["taskTypes"] == ["claim-run", "classify-scheme", "deep-read", "rebuild-affiliations", "rebuild-classics", "rebuild-interests", "rebuild-map", "retry-step", "run-daily", "suggest-schemes"]
+    assert get(client, "/health")["taskTypes"] == ["claim-run", "classify-scheme", "deep-read", "generate-report", "rebuild-affiliations", "rebuild-classics", "rebuild-interests", "rebuild-map", "retry-step", "run-daily", "suggest-schemes"]
 
 
 def test_jobs_report_pdf_download_and_dblp(client, seeded, settings):

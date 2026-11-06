@@ -2,6 +2,7 @@
 import json
 import re
 import sqlite3
+import unicodedata
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
@@ -60,6 +61,17 @@ def ref_title(d, pid=None):
 HIDDEN_ORIGINS = ("recommendation", "note-follow")
 # paper 返回体里由存储层拼出来、不存进 data 的字段。
 PAPER_COMPUTED = ("kind", "schemaVersion", "id", "aliases", "hasPdf", "hasDeepRead", "user", "addedAt", "updatedAt")
+
+
+def _name_norm(name):
+    """作者名比较用：去掉重音、标点，统一小写（Müller = muller，“Zhang, Wei” = “zhang wei”）。"""
+    plain = unicodedata.normalize("NFKD", str(name or ""))
+    plain = "".join(ch for ch in plain if not unicodedata.combining(ch))
+    return re.sub(r"[^\w]+", " ", plain.casefold()).strip()
+
+
+def _name_terms(text):
+    return [t for t in _name_norm(text).split() if t]
 
 
 class Store:
@@ -204,7 +216,7 @@ class Store:
                 "relevance": [d.get("libraryRelevance") or "none"], "reading": [cls.reading_state(user, note_status)]}
 
     def list_papers(self, q="", watched=None, offset=0, limit=50, own=None, topic=None, venue=None, year=None,
-                    status=None, relevance=None, rating=None, sort="added", with_facets=False, reading=None, queued=None):
+                    status=None, relevance=None, rating=None, sort="added", with_facets=False, reading=None, queued=None, author=None):
         """论文库查询：筛选、排序、分页，可选返回分面计数（每个分面按“除它自己以外的筛选条件”计数）。
         论文是几千篇的量级，直接在内存里筛，比拼 SQL 简单。返回 (items, total, facets 或 None)。"""
         with self.conn() as c:
@@ -219,6 +231,7 @@ class Store:
                                                                         "watched": False, "own": False, "discussionStatus": None, "updatedAt": None}
                 papers.append((row, d, u, self._facet_values(d, u, noted.get(row["id"]))))
         terms = [t for t in (q or "").lower().split() if t]
+        author_terms = _name_terms(author)
         chosen = {"topic": topic, "venue": venue, "year": str(year) if year else None, "status": status, "relevance": relevance,
                   "reading": reading}
 
@@ -236,6 +249,8 @@ class Store:
                 return False
             if rating and rating != "unrated" and u["rating"] < int(rating):
                 return False
+            if author_terms and not any(all(t in name for t in author_terms) for name in map(_name_norm, d.get("authors") or [])):
+                return False  # 只看作者名；几个词要落在同一位作者身上（“Guibin Zhang”不会匹配 Guibin Li + Wei Zhang 合著的论文）
             if terms:
                 text = " ".join([row["search"], (d.get("summary") or "").lower(), (d.get("abstract") or "").lower()])
                 return all(t in text for t in terms)

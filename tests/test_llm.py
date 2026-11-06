@@ -453,3 +453,55 @@ def test_deep_read_needs_pdf(client, store, monkeypatch):
     run_task(store, store.get_task(res.json()["id"]))
     task = store.get_task(res.json()["id"])
     assert task["status"] == "failed" and "上传 PDF" in task["error"]
+
+
+def test_weekly_report_has_cited_progress_and_my_work(client, store, monkeypatch):
+    """周报两部分：研究进展（每个结论带引用，无效引用的丢掉）和我做了什么（只统计后端有记录的）。"""
+    from datetime import datetime
+    from pwb.util import TZ
+    for i, title in enumerate(["Agents Route", "Debate Wins", "Old"], 1):
+        store.upsert_paper({"id": "arxiv-2611.0000%d" % i, "title": title, "authors": [], "publicationStatus": "预印本", "summary": ""})
+    pick = lambda i, t: {"id": "arxiv-2611.0000%d" % i, "title": t, "titleZh": "中文" + t, "summary": "摘要" + t, "publishedAt": "2026-11-03",
+                         "url": "https://arxiv.org/abs/2611.0000%d" % i, "reason": "命中关键词"}
+    for day, picks in (("2026-11-03", [pick(1, "Agents Route")]), ("2026-11-04", [pick(1, "Agents Route"), pick(2, "Debate Wins")]), ("2026-11-12", [pick(3, "Old")])):
+        store.put_doc({"kind": "brief", "schemaVersion": 1, "generatedAt": day + "T01:00:00+08:00", "runId": None, "date": day, "updatedAt": day + "T01:00:00+08:00",
+                       "newCount": 1, "pickedCount": len(picks), "summary": "", "highlights": [], "picks": picks, "todayNew": [], "weekly": None, "accepted": []})
+    store.patch_user("arxiv-26110.00001".replace("26110", "2611") if False else "arxiv-2611.00001", {"rating": 5})
+    store.patch_user("arxiv-2611.00002", {"watched": True})
+    ts = int(datetime(2026, 11, 4, 12, tzinfo=TZ).timestamp() * 1000)
+    with store.conn() as c:
+        c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", ("arxiv-2611.00001", "论文阅读/x.md", "Agents Route- A", "粗读", None, ts, "[]", "2026-11-04T12:00:00+08:00"))
+        c.execute("UPDATE paper_user SET updated_at = ? WHERE paper_id IN ('arxiv-2611.00001', 'arxiv-2611.00002')", ("2026-11-04T13:00:00+08:00",))
+    seen = {}
+
+    def fake(settings, config, system, prompt, schema):
+        seen["prompt"] = prompt
+        return {"overview": "路由和辩论是本周主线 [1,2]。", "overviewRefs": [1, 2], "themes": [
+            {"title": "路由", "text": "按输入路由省成本。", "refs": [1, 99]},
+            {"title": "辩论", "text": "辩论提升准确率。", "refs": [2]},
+            {"title": "没有依据", "text": "编的。", "refs": [99]}]}
+    monkeypatch.setattr(llm, "complete_json", fake)
+    params = {"type": "weekly", "period": {"start": "2026-11-02", "end": "2026-11-08"}}
+    res = client.post(API + "/tasks", json={"type": "generate-report", "params": params}, headers={"Idempotency-Key": "rep-1"})
+    assert res.status_code == 202
+    run_task(store, store.get_task(res.json()["id"]))
+    task = store.get_task(res.json()["id"])
+    assert task["status"] == "done", task
+    assert "Agents Route" in seen["prompt"] and "Debate Wins" in seen["prompt"] and "Old" not in seen["prompt"], "只取这一周的精选，去重"
+    report = assert_contract(client.get(API + "/reports/weekly-2026-11-02").json(), "report")
+    md = report["markdown"]
+    assert "## 一、研究领域进展" in md and "## 二、我做了什么" in md
+    assert "路由和辩论是本周主线。 [1][2]" in md, "文字里模型自己写的编号去掉，统一标在后面"
+    assert "按输入路由省成本。 [1]" in md and "辩论提升准确率。 [2]" in md and "编的" not in md, "没有有效引用的主题不收，无效编号丢掉"
+    assert "1. [Agents Route](https://arxiv.org/abs/2611.00001)" in md and "2. [Debate Wins]" in md
+    assert "动过 1 篇阅读笔记（精读 0、粗读 1、待读 0）" in md and "给 1 篇论文打了分" in md and "关注 1 篇" in md
+    assert "★★★★★☆" not in md and "★★★★★　Agents Route" in md and "Agents Route: A" in md
+    index = assert_contract(client.get(API + "/reports").json(), "reports-index")
+    assert [r["id"] for r in index["reports"]] == ["weekly-2026-11-02"] and index["topPapers"][0]["score"] == 1.0
+    # 没有精选的一周：不调大模型
+    monkeypatch.setattr(llm, "complete_json", lambda *a: (_ for _ in ()).throw(AssertionError("不该调用")))
+    empty = client.post(API + "/tasks", json={"type": "generate-report", "params": {"type": "weekly", "period": {"start": "2026-09-07", "end": "2026-09-13"}}},
+                        headers={"Idempotency-Key": "rep-2"})
+    run_task(store, store.get_task(empty.json()["id"]))
+    assert store.get_task(empty.json()["id"])["status"] == "done"
+    assert "没有精选论文" in client.get(API + "/reports/weekly-2026-09-07").json()["markdown"]
