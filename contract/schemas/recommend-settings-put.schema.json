@@ -188,6 +188,9 @@
         },
         "classics": {
           "type": "boolean"
+        },
+        "report": {
+          "type": "boolean"
         }
       },
       "required": [],

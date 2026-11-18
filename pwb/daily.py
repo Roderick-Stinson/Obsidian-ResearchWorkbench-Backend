@@ -40,7 +40,7 @@ DEFAULTS = {
     # 之前几天的精选你没处理的（没评分、没标记、没加队列、没写笔记、没点“跳过”），在推荐页顶上再给你看：
     # 只看最近 days 天，最多 max 篇，越新、分越高越靠前；过了 days 天就不再提醒（往期推荐里还能找到）。
     "backlog": {"days": 14, "max": 10},
-    "weekly": {"newAccepted": True, "map": True, "classics": False},
+    "weekly": {"newAccepted": True, "map": True, "classics": False, "report": True},
     "library": {"autoAdd": []},
     # 阅读笔记怎么参与推荐（见 notes.py）；sections 是模板里的小节名，改了模板标题要跟着改。
     "notes": {"sections": {"relation": "和我的研究的关系", "ideas": "想法与疑问", "follow": "要追的论文"},
@@ -54,7 +54,7 @@ CATEGORIES = ("core", "adjacent", "trending")
 CATEGORY_NAME = {"core": "核心", "adjacent": "邻近", "trending": "热点"}
 STEPS = [("fetch", "抓取新论文"), ("version-check", "检查中稿，升级论文 ID"), ("affiliations", "补作者机构"), ("summaries", "补中文标题和总结"), ("notes", "整理阅读笔记"), ("classify", "按研究兴趣判定相关性"),
          ("recommend", "分出邻近 / 热点"), ("skim", "速读"), ("pick", "挑选精选、写简报"),
-         ("new-accepted", "每周：新中稿入库"), ("map", "每周：更新领域发展史与热点"), ("classics", "每周：更新经典与必读"),
+         ("new-accepted", "每周：新中稿入库"), ("map", "每周：更新领域发展史与热点"), ("classics", "每周：更新经典与必读"), ("report", "每周：生成上周周报"),
          ("push", "推送")]
 OVERLAP_DAYS = 3        # arXiv 提交后要等公告才查得到，往前多取几天，按编号去重
 HF_DAYS = 3             # Hugging Face 每日论文的点赞还在涨，最近几天的每次都重新取
@@ -966,6 +966,18 @@ def step_classics(store, cfg, date, log, config):
     return msg, 0
 
 
+def step_report(store, cfg, date, log, config):
+    """每周：生成上一周（运行日前 7 天到前一天）的周报，研究进展带引用 + 我做了什么（见 report.py）。已经有这一周的就不重做（手动生成过的不覆盖）。"""
+    from . import report
+    day = datetime.fromisoformat(date).date()
+    period = {"start": (day - timedelta(days=7)).isoformat(), "end": (day - timedelta(days=1)).isoformat()}
+    rid = report.report_id("weekly", period)
+    if store.get_doc("report", rid):
+        return "{} 已经有了，不重做".format(rid), 0
+    msg, _ = report.generate(store, config, {"type": "weekly", "period": period}, lambda d, n, m: log(m))
+    return msg, 1
+
+
 # ---------- 运行一次 ----------
 
 def _run_doc(store, date):
@@ -989,7 +1001,8 @@ def _put_run(store, doc, run, cfg):
     schedule = [{"when": "每天 " + t if cfg["schedule"]["enabled"] else "已关闭定时（可手动刷新）", "what": "抓取新论文、初筛、分三类、速读、精选和简报", "panel": "论文推荐"},
                 {"when": "每天 " + t, "what": "检查论文库里的预印本有没有中稿", "panel": "论文库"},
                 {"when": day + " " + t, "what": "新中稿入库" * cfg["weekly"]["newAccepted"] + ("、更新领域发展史与热点" if cfg["weekly"]["map"] else "")
-                 + ("、更新经典与必读" if cfg["weekly"]["classics"] else ""), "panel": "首页简报 / 领域发展史"}]
+                 + ("、更新经典与必读" if cfg["weekly"]["classics"] else "") + ("、生成上周周报" if cfg["weekly"]["report"] else ""),
+                 "panel": "首页简报 / 领域发展史 / 报告"}]
     attention = [a for a in (doc or {}).get("attention", []) if a["source"] != "pipeline"]
     for s in run["steps"]:
         if s["status"] == "failed":
@@ -1012,8 +1025,8 @@ def run(store, config, progress, only=None, date=None):
             continue
         if key == "push":
             plan.append((key, None, "还没接推送渠道"))
-        elif key in ("new-accepted", "map", "classics"):
-            enabled = cfg["weekly"][{"new-accepted": "newAccepted", "map": "map", "classics": "classics"}[key]]
+        elif key in ("new-accepted", "map", "classics", "report"):
+            enabled = cfg["weekly"][{"new-accepted": "newAccepted", "map": "map", "classics": "classics", "report": "report"}[key]]
             if not enabled:
                 plan.append((key, None, "设置里关闭了"))
             elif not only and not _is_weekly_day(cfg, date, key, store):
@@ -1023,8 +1036,8 @@ def run(store, config, progress, only=None, date=None):
         else:
             plan.append((key, key, None))
     funcs = {"fetch": step_fetch, "version-check": step_version_check, "affiliations": step_affiliations, "summaries": summarize.step_summaries, "notes": notes.step_notes, "classify": step_classify, "recommend": step_recommend,
-             "skim": step_skim, "pick": step_pick, "new-accepted": step_new_accepted, "map": step_map, "classics": step_classics}
-    needs_llm = {"affiliations", "summaries", "notes", "classify", "skim", "pick", "new-accepted", "map", "classics"}
+             "skim": step_skim, "pick": step_pick, "new-accepted": step_new_accepted, "map": step_map, "classics": step_classics, "report": step_report}
+    needs_llm = {"affiliations", "summaries", "notes", "classify", "skim", "pick", "new-accepted", "map", "classics", "report"}
     messages = []
     for n, (key, func, skip) in enumerate(plan, 1):
         step = next(s for s in run_["steps"] if s["key"] == key)
@@ -1041,7 +1054,7 @@ def run(store, config, progress, only=None, date=None):
             msg, _ = f(store, cfg, date, log, config) if key in needs_llm else f(store, cfg, date, log)
             step.update(status="ok", finishedAt=now())
             messages.append(msg)
-            if key in ("new-accepted", "map", "classics"):
+            if key in ("new-accepted", "map", "classics", "report"):
                 _weekly_done(store, key, date)
         except Exception as e:  # noqa: BLE001 — 一步失败不影响后面的步骤，记下来在面板上显示
             log_.exception("每日流水线 %s 失败", key)

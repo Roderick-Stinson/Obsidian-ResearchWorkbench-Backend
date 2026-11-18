@@ -16,10 +16,18 @@
           "已读",
           "收藏",
           "复现",
+          "代码可完整复现",
+          "代码不完整",
           "跳过"
         ]
       },
-      "uniqueItems": true
+      "uniqueItems": true,
+      "not": {
+        "allOf": [
+          { "contains": { "const": "代码可完整复现" } },
+          { "contains": { "const": "代码不完整" } }
+        ]
+      }
     },
     "relevance": {
       "anyOf": [

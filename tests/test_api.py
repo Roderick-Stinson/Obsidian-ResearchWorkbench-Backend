@@ -103,16 +103,19 @@ def test_pdf_missing_is_404(client, seeded):
 # ---------- 你的数据 ----------
 
 def test_patch_user_shows_up_in_recommendations(client, seeded):
-    res = client.patch(API + "/me/papers/" + MAS_GATE, json={"rating": 4, "flags": ["收藏"], "relevance": "相关"})
+    code_flags = ["代码可完整复现"]
+    res = client.patch(API + "/me/papers/" + MAS_GATE, json={"rating": 4, "flags": ["收藏", *code_flags], "relevance": "相关"})
     user = assert_contract(res.json(), "paper-user")
-    assert user["rating"] == 4 and user["updatedAt"]
+    assert user["rating"] == 4 and user["updatedAt"] and user["flags"] == ["收藏", *code_flags]
+    library_paper = get(client, "/papers")["items"]
+    assert next(p for p in library_paper if p["id"] == MAS_GATE)["user"]["flags"] == ["收藏", *code_flags]
     rec = get(client, "/recommendations/2026-10-27")["papers"][0]
-    assert rec["id"] == MAS_GATE and rec["user"]["flags"] == ["收藏"] and rec["user"]["relevance"] == "相关"
+    assert rec["id"] == MAS_GATE and rec["user"]["flags"] == ["收藏", *code_flags] and rec["user"]["relevance"] == "相关"
 
 
 def test_patch_user_rejects_bad_input(client, seeded):
     assert client.patch(API + "/me/papers/arxiv-2699.00001", json={"rating": 1}).status_code == 404
-    for body in ({}, {"flags": ["不相关"]}, {"rating": 9}, {"foo": 1}):
+    for body in ({}, {"flags": ["不相关"]}, {"flags": ["代码可完整复现", "代码不完整"]}, {"rating": 9}, {"foo": 1}):
         res = client.patch(API + "/me/papers/" + MAAS, json=body)
         assert res.status_code == 400, body
         assert_contract(res.json(), "error")

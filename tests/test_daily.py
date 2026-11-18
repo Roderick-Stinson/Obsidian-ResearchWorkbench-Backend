@@ -227,6 +227,7 @@ def test_weekly_steps_only_on_weekly_day(store, monkeypatch):
     ran = []
     monkeypatch.setattr(daily, "step_new_accepted", lambda store, cfg, date, log, config: ran.append(date) or ("ok", 0))
     monkeypatch.setattr(daily, "step_map", lambda store, cfg, date, log, config: ("ok", 0))
+    monkeypatch.setattr(daily, "step_report", lambda store, cfg, date, log, config: ("ok", 0))
     daily.run(store, llm.get_config(store), lambda *a: None, date="2026-10-29")  # 周四
     assert ran == []
     daily.run(store, llm.get_config(store), lambda *a: None, date="2026-11-02")  # 周一
@@ -235,6 +236,35 @@ def test_weekly_steps_only_on_weekly_day(store, monkeypatch):
     assert ran == ["2026-11-02"], "同一天不重复"
     daily.run(store, llm.get_config(store), lambda *a: None, date="2026-11-10")  # 周二：错过了周一，一周后补做
     assert ran == ["2026-11-02", "2026-11-10"]
+
+
+def test_weekly_report_step(store, monkeypatch):
+    """每周自动生成上一周（运行日前 7 天到前一天）的周报：周一才做、已经有的不重做、设置里能关。"""
+    from pwb import report
+    setup(store, monkeypatch)
+    made = []
+    monkeypatch.setattr(report, "generate", lambda store, config, params, progress: made.append(params["period"]) or ("已生成周报", []))
+    step = lambda date: daily.step_report(store, daily.get_settings(store), date, lambda m: None, llm.get_config(store))
+    assert step("2026-11-02")[0] == "已生成周报" and made == [{"start": "2026-10-26", "end": "2026-11-01"}], "周一生成上周一到周日"
+    store.put_doc({"kind": "report", "schemaVersion": 1, "generatedAt": "2026-11-02T01:00:00+08:00", "runId": None, "id": "weekly-2026-10-26", "type": "weekly",
+                   "period": {"start": "2026-10-26", "end": "2026-11-01"}, "title": "周报", "markdown": "x"})
+    assert "已经有了" in step("2026-11-02")[0] and len(made) == 1, "手动生成过的不覆盖"
+    monkeypatch.setattr(daily, "step_report", lambda store, cfg, date, log, config: made.append(date) or ("ok", 0))
+    for name in ("step_fetch", "step_version_check", "step_affiliations", "step_classify", "step_recommend", "step_skim", "step_pick",
+                 "step_new_accepted", "step_map", "step_classics"):  # 只看周报这一步什么时候跑，别的步骤（要联网）都不做
+        monkeypatch.setattr(daily, name, lambda *a, **k: ("ok", 0))
+    monkeypatch.setattr(daily.summarize, "step_summaries", lambda *a, **k: ("ok", 0))
+    monkeypatch.setattr(daily.notes, "step_notes", lambda *a, **k: ("ok", 0))
+    made.clear()
+    daily.run(store, llm.get_config(store), lambda *a: None, date="2026-11-03")  # 周二，没错过周一（周一没跑过：补做条件是上次做过且隔了一周）
+    assert made == [], "不是每周运行的日子"
+    daily.run(store, llm.get_config(store), lambda *a: None, date="2026-11-09")  # 周一
+    assert made == ["2026-11-09"]
+    daily.put_settings(store, {"weekly": {"report": False}})
+    daily.run(store, llm.get_config(store), lambda *a: None, date="2026-11-16")
+    assert made == ["2026-11-09"], "设置里关了就不做"
+    body = daily.settings_body(store)
+    assert body["weekly"]["report"] is False
 
 
 def test_scheduler_runs_once_a_day_and_catches_up(client, store):

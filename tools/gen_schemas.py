@@ -140,7 +140,7 @@ REC_SETTINGS = {
     "trending": {"minHfUpvotes": rng(0, 10000), "useHotspots": BOOL, "hotspotMinHfUpvotes": rng(0, 10000), "maxPerDay": rng(0, 500)},
     "skim": {"fullText": arr(CATS, uniqueItems=True), "maxFullTextPerDay": rng(0, 500)},
     "pick": {"max": rng(0, 30), "outsideMax": rng(0, 30), "weights": closed({k: WEIGHT for k in ("relevance", "quality", "hf", "code")})},
-    "weekly": {"newAccepted": BOOL, "map": BOOL, "classics": BOOL},
+    "weekly": {"newAccepted": BOOL, "map": BOOL, "classics": BOOL, "report": BOOL},
     "library": {"autoAdd": arr(CATS, uniqueItems=True)},
     "backlog": {"days": rng(1, 60), "max": rng(0, 50)},
     "authors": {"daily": BOOL, "readPdf": BOOL, "maxPerDay": rng(0, 1000), "followRecommend": BOOL, "followLookbackDays": rng(1, 365)},

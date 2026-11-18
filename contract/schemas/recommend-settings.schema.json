@@ -226,12 +226,16 @@
             },
             "classics": {
               "type": "boolean"
+            },
+            "report": {
+              "type": "boolean"
             }
           },
           "required": [
             "newAccepted",
             "map",
-            "classics"
+            "classics",
+            "report"
           ],
           "additionalProperties": false
         },

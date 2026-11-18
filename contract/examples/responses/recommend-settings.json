@@ -57,7 +57,8 @@
   "weekly": {
     "newAccepted": true,
     "map": true,
-    "classics": false
+    "classics": false,
+    "report": true
   },
   "library": {
     "autoAdd": []
