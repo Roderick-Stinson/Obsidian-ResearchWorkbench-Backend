@@ -17,8 +17,8 @@ def new_tree():
             "stale": True, "domains": [], "candidates": []}
 
 
-def _node(label, origin, level, summary="", evidence=()):
-    node = {"id": "kw-" + secrets.token_hex(4), "label": label, "summary": summary, "origin": origin,
+def _node(label, origin, level, summary="", evidence=(), summaryEn="", labelEn=""):
+    node = {"id": "kw-" + secrets.token_hex(4), "label": label, "summary": summary, "summaryEn": summaryEn, "labelEn": labelEn, "origin": origin,
             "pinned": False, "evidence": list(evidence)}
     if level < 3:
         node["children"] = []
@@ -44,7 +44,7 @@ def _check_unique(siblings, label, except_id=None):
         raise ApiError(409, "同一级已有同名关键词：" + label.strip())
 
 
-def add_node(tree, parent_id, label, summary=""):
+def add_node(tree, parent_id, label, summary="", summaryEn="", labelEn=""):
     """你手动添加关键词。parent_id 为 root 时添加一级领域。"""
     tree = tree or new_tree()
     label = label.strip()
@@ -56,7 +56,7 @@ def add_node(tree, parent_id, label, summary=""):
             raise ApiError(409, "关键词最多三级，三级关键词下不能再添加")
         siblings, level = parent["children"], parent_level + 1
     _check_unique(siblings, label)
-    siblings.append(_node(label, "user", level, summary.strip()))
+    siblings.append(_node(label, "user", level, summary.strip(), summaryEn=summaryEn.strip(), labelEn=labelEn.strip()))
     return tree
 
 
@@ -68,6 +68,10 @@ def patch_node(tree, node_id, patch):
         node["label"] = patch["label"].strip()
     if "summary" in patch:
         node["summary"] = patch["summary"].strip()
+    if "labelEn" in patch:
+        node["labelEn"] = patch["labelEn"].strip()
+    if "summaryEn" in patch:
+        node["summaryEn"] = patch["summaryEn"].strip()
     node["origin"] = "user"
     return tree
 
@@ -152,10 +156,12 @@ def _graft(existing, incoming, level, removed, trail=()):
             continue
         match = next((n for n in existing if n["label"].strip().lower() == item["label"].strip().lower()), None)
         if match is None:
-            match = _node(item["label"].strip(), "extracted", level, item["summary"], item["evidence"])
+            match = _node(item["label"].strip(), "extracted", level, item["summary"], item["evidence"], item.get("summaryEn", ""), item.get("labelEn", ""))
             existing.append(match)
         elif match["origin"] == "extracted":
             match["summary"], match["evidence"] = item["summary"], item["evidence"]
+            match["summaryEn"] = item.get("summaryEn", "")
+            match["labelEn"] = item.get("labelEn", "")
         if level < 3:
             _graft(match["children"], item.get("children", []), level + 1, removed, path)
 
@@ -167,5 +173,5 @@ def merge_extracted(tree, extraction, removed=()):
     _graft(tree["domains"], extraction["domains"], 1, list(removed))
     ids = {n["id"] for n, _, _ in walk(tree["domains"])}
     tree["candidates"] = [c for c in tree["candidates"] if c["parentId"] in ids]
-    tree.update(overview=extraction["overview"], basis=extraction["basis"], generatedAt=now(), stale=False)
+    tree.update(overviewEn=extraction.get("overviewEn", ""), overview=extraction["overview"], basis=extraction["basis"], generatedAt=now(), stale=False)
     return tree

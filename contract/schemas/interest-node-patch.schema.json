@@ -9,6 +9,12 @@
     },
     "summary": {
       "type": "string"
+    },
+    "summaryEn": {
+      "type": "string"
+    },
+    "labelEn": {
+      "type": "string"
     }
   },
   "required": [],

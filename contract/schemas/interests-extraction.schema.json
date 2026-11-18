@@ -173,6 +173,12 @@
                       "children": {
                         "type": "array",
                         "maxItems": 0
+                      },
+                      "summaryEn": {
+                        "type": "string"
+                      },
+                      "labelEn": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -181,6 +187,12 @@
                       "evidence"
                     ]
                   }
+                },
+                "summaryEn": {
+                  "type": "string"
+                },
+                "labelEn": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -189,6 +201,12 @@
                 "evidence"
               ]
             }
+          },
+          "summaryEn": {
+            "type": "string"
+          },
+          "labelEn": {
+            "type": "string"
           }
         },
         "required": [
@@ -198,6 +216,9 @@
         ]
       },
       "minItems": 1
+    },
+    "overviewEn": {
+      "type": "string"
     }
   },
   "required": [

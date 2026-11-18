@@ -443,7 +443,7 @@ def create_app(settings):
     @r.post("/me/interests/nodes/{parent_id}/children")
     async def add_interest_node(parent_id: str, request: Request):
         body = await read_body(request, "interest-node-create")
-        tree = interests.add_node(store.get_kv("interests"), parent_id, body["label"], body.get("summary", ""))
+        tree = interests.add_node(store.get_kv("interests"), parent_id, body["label"], body.get("summary", ""), body.get("summaryEn", ""), body.get("labelEn", ""))
         return out("interests", store.set_kv("interests", tree))
 
     @r.patch("/me/interests/nodes/{node_id}")

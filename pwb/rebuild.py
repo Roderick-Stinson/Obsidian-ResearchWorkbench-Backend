@@ -31,7 +31,9 @@ def _evidence_schema():
 def _node_schema(level):
     props = {"label": {"type": "string", "minLength": 1}, "summary": {"type": "string", "minLength": 1},
              "evidence": {"type": "array", "minItems": 1, "items": _evidence_schema()}}
-    required = ["label", "summary", "evidence"]
+    props["summaryEn"] = {"type": "string", "minLength": 1}
+    props["labelEn"] = {"type": "string", "minLength": 1}
+    required = ["label", "labelEn", "summary", "evidence"]
     if level < 3:
         props["children"] = {"type": "array", "items": _node_schema(level + 1)}
         required.append("children")
@@ -40,7 +42,7 @@ def _node_schema(level):
 
 # 给模型的 schema 是自包含的（不引用 common.schema.json），basis 由后端自己算，不让模型填。
 MODEL_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["overview", "domains"],
-                "properties": {"overview": {"type": "string"},
+                "properties": {"overview": {"type": "string"}, "overviewEn": {"type": "string", "minLength": 1},
                                "domains": {"type": "array", "minItems": 1, "items": _node_schema(1)}}}
 
 
@@ -90,7 +92,7 @@ def build_prompt(tree, sources, removed):
         "",
         "要求：",
         "1. 三级结构：一级是研究领域，二级是研究方向，三级是具体问题或方法。一级 1–3 个，每个一级下 2–6 个二级，每个二级下 1–4 个三级，总数不超过 60。",
-        "2. label 用简洁的中文（不超过 15 个字，专有名词可保留英文）；summary 用一句中文说明这个关键词指什么。overview 用 2–4 句中文概括我的研究兴趣，只写你的概括，不要复制材料原文。",
+        "2. label 用简洁的中文（不超过 15 个字，专有名词可保留英文）；summary 用一句中文说明这个关键词指什么；labelEn 用准确标识该领域、方向、问题或方法的简洁英文学术关键词（如 Credit Assignment、Multi-Agent Architecture Search），不要写成说明句，不要翻译 summary。英文术语必须优先直接采用所给论文标题、摘要、Related Work 或方法小标题中已有的名称，可统一大小写和断行。先找原文术语，再与中文节点配对，不要逐字翻译中文或自行拼接长串修饰语。一级/二级优先采用原文的研究领域或方向名，三级采用具体方法/机制名；方法名不要冒充公认领域名称。材料中没有依据时保持简短，不杜撰术语。summaryEn 和 overviewEn 可省略。overview 用 2–4 句中文概括我的研究兴趣，只写你的概括，不要复制材料原文。",
         "3. 每个节点至少一条 evidence：kind 和 ref 必须照抄材料标题里给出的值，title 用论文简称或文件名。",
         "4. quote 必须是从该材料原文中逐字复制的一段（10–40 个词，保持原文语言，不翻译、不改写、不加省略号）；找不到合适原句时 quote 填 null。",
         "5. 只根据材料内容整理，不要加入材料里没有依据的方向。",
@@ -183,7 +185,7 @@ def rebuild_interests(store, config, progress):
     raw = llm.complete_json(store.settings, config, SYSTEM, prompt, MODEL_SCHEMA)
 
     def finish(raw):
-        extraction = {"overview": _chinese_overview(raw.get("overview", "")), "basis": basis, "domains": raw.get("domains", [])}
+        extraction = {"overview": _chinese_overview(raw.get("overview", "")), "overviewEn": raw.get("overviewEn", ""), "basis": basis, "domains": raw.get("domains", [])}
         errs = contract.errors("interests-extraction", extraction)
         if errs:
             raise ValueError("{} 返回的结果不符合约定：{}".format(name, "；".join(errs[:3])))

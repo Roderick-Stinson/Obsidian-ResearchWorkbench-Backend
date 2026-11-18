@@ -227,6 +227,12 @@
                           "children": {
                             "type": "array",
                             "maxItems": 0
+                          },
+                          "summaryEn": {
+                            "type": "string"
+                          },
+                          "labelEn": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -255,6 +261,12 @@
                           }
                         }
                       }
+                    },
+                    "summaryEn": {
+                      "type": "string"
+                    },
+                    "labelEn": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -284,6 +296,12 @@
                     }
                   }
                 }
+              },
+              "summaryEn": {
+                "type": "string"
+              },
+              "labelEn": {
+                "type": "string"
               }
             },
             "required": [
@@ -381,6 +399,9 @@
               "examples"
             ]
           }
+        },
+        "overviewEn": {
+          "type": "string"
         }
       },
       "required": [
