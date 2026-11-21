@@ -16,6 +16,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from . import interests, llm, profile
+from .paper_links import links_for
 from .util import dumps, now
 
 S2_BULK = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
@@ -377,9 +378,9 @@ def ingest(store, log):
         year = venue_year(d)
         venue = "{} {}".format(d["venueShort"], year or "").strip()
         authors = [a["name"] for a in d.get("authors") or [] if a.get("name")]
-        oa = (d.get("openAccessPdf") or {}).get("url") or None
         arxiv = next((a for a in [primary, *aliases] if a.startswith("arxiv-")), None)
-        source = "https://doi.org/" + d["externalIds"]["DOI"] if (d.get("externalIds") or {}).get("DOI") and not d["externalIds"]["DOI"].startswith("10.48550") else d.get("url")
+        urls = links_for({"id": primary, "aliases": aliases}, d)
+        source = urls["source"]
         verified = acceptance(d) == "verified"
         reason = dec["reason"] if verified else "（会议信息未核实：只找到 arXiv 版本，{} 是 Semantic Scholar 推断的）{}".format(venue, dec["reason"])
         fields = {"venue": venue, "year": year, "publicationStatus": "已发表" if verified else "待核实",
@@ -393,6 +394,7 @@ def ingest(store, log):
             if not verified:
                 fields = {k: v for k, v in fields.items() if k not in ("venue", "year", "publicationStatus", "metadataStatus")}
             fields = {k: v for k, v in fields.items() if k not in (paper.get("userEdited") or [])}
+            fields["urls"] = links_for(paper, d, extra_ids=[primary, *aliases])
             store.upsert_paper({**paper, **fields, "titleZh": paper.get("titleZh") or dec["titleZh"],
                                 "summary": paper.get("summary") or dec["summary"],
                                 "matchedKeywords": paper.get("matchedKeywords") or matched}, paper["aliases"] + new_aliases)
@@ -404,7 +406,7 @@ def ingest(store, log):
             usable_aliases = [a for a in aliases if not store.resolve(a)]
             store.upsert_paper({"id": primary, "title": d["title"], "titleZh": dec["titleZh"], "authors": authors,
                                 "firstAuthor": authors[0] if authors else "", "versions": versions,
-                                "urls": {"source": source, "pdf": oa, "code": None}, "pdfSha256": None,
+                                "urls": urls, "pdfSha256": None,
                                 "summary": dec["summary"], "matchedKeywords": matched,
                                 "addedAt": now(), **fields}, usable_aliases)
             titles[_norm_title(d["title"])] = primary
