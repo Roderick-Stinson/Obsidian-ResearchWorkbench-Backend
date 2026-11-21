@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import __version__, authors, contract, daily, errors, schemes, interests, jobs, llm, migrate, notes, pdfmeta, pdfs
+from . import experiment_mcp
 from .errors import invalid, not_found
 from .store import HIDDEN_ORIGINS, Store
 from .tasks import HANDLERS, Worker
@@ -555,5 +556,6 @@ def create_app(settings):
             raise not_found("任务不存在：" + task_id)
         return out("task", task)
 
+    experiment_mcp.install(r, store)
     app.include_router(r)
     return app
