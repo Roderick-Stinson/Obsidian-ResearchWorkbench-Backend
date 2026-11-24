@@ -15,4 +15,12 @@ description: 在本机 Obsidian 论文工作台登记实验、交接运行、回
 
 用 `list_runs` 按项目及 `running` 找到待收结果，或凭编号直接 `get_run`。根据返回的主机、作业号和路径检查实际状态和结果文件。仍在跑就保留运行状态；连接中断或暂未出现结果也不等同于失败。
 
-拿到终态证据后调用 `finish_run`，使用原编号、状态、观察到的结论及证据路径。主指标按配置中记录的单位填入 `score`；成本、调用数等可放入 `metrics`。失败时记录日志位置和原因。已有终态通过 `get_run` 核对；相同回填可重试，冲突的结果需要核对证据。向用户返回运行编号、结果和来源位置。
+拿到终态证据后调用 `finish_run`，使用原编号、状态、观察到的结论及证据路径。主指标按配置中记录的单位填入 `score`；成本、调用数等可放入 `metrics`；可选附带 `display`（结构化汇总行 `summaryRows`、对比表 `blocks` 等）。失败时记录日志位置和原因。已有终态通过 `get_run` 核对；相同回填可重试，冲突的结果需要核对证据。向用户返回运行编号、结果和来源位置。
+
+**结构化实验展示（可选）**
+
+面板直接按后端数据渲染研究路线、实验方案与结构化结果表，不要修改面板前端源码：
+- 用 `update_project_overview` 更新论文的顶部总述、判断摘要与基准说明（`display`）。
+- 用 `upsert_idea` 维护研究总问题（`kind: "rq"`）、命题与分步实验设计（`kind: "claim"`，可带 `step`/`short`/`gap`/`needs`/`exps`）或待补清单（`kind: "todo"`）。
+- 用 `upsert_config` 维护实验配置或待跑方案（可带 `exp_code`、`phase`、`guide`）。
+- 用 `attach_run_display`（或 `finish_run` 的 `display`）为已完成运行挂载结构化对照表（`summaryRows`、`blocks` 中的 `tables`/`matrix`），后续实验形态变化时只更新数据即可。

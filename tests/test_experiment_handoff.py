@@ -31,8 +31,8 @@ def rpc(client, method, **params):
     return r.json()["result"]
 
 
-def tool(client, name, **args):
-    return rpc(client, "tools/call", name=name, arguments=args)
+def tool(client, _name, **args):
+    return rpc(client, "tools/call", name=_name, arguments=args)
 
 
 def test_handoff_after_restart(settings):
@@ -76,3 +76,48 @@ def test_parallel_and_offline_replays(client):
     assert submit(client, {**edit, "request_id": "other"}).status_code == 409
     bad = client.post(MCP, json={}, headers={"origin": "https://other.example"})
     assert bad.status_code == 403
+
+
+def test_structured_experiment_views(client):
+    panel_change(client, "entities", PAPER).raise_for_status()
+    assert not tool(client, "update_project_overview", project_id=PAPER["id"],
+                    display={"subtitle": "Overview", "scope": "Generic scope"}).get("isError")
+    res_idea = tool(client, "upsert_idea", project_id=PAPER["id"], id="claim-1",
+                    question="C1 · Does routing help?", kind="claim", step="① Probe",
+                    short="Does routing help?", exps=["E1"], needs=[{"exp": "E1", "text": "Run probe"}],
+                    order=1)
+    assert not res_idea.get("isError")
+    assert res_idea["structuredContent"]["idea"]["step"] == "① Probe"
+    # Updating existing idea preserves existing fields while merging new ones
+    res_idea2 = tool(client, "upsert_idea", project_id=PAPER["id"], id="claim-1",
+                     question="C1 · Does routing help?", stage="小样本支持", summary="Not yet")
+    assert res_idea2["structuredContent"]["idea"]["step"] == "① Probe"
+    assert res_idea2["structuredContent"]["idea"]["stage"] == "小样本支持"
+
+    res_cfg = tool(client, "upsert_config", project_id=PAPER["id"], id="cfg-e1",
+                   name="E1 · Probe", exp_code="E1", phase="formal",
+                   guide={"purpose": "Test sensitivity", "fixed": "Model", "changed": "Input"})
+    assert not res_cfg.get("isError")
+    assert res_cfg["structuredContent"]["config"]["expCode"] == "E1"
+
+    assert not tool(client, "start_run", **ARGS).get("isError")
+    display_v1 = {"summaryRows": [["Row A", "10%", "baseline", ""]], "audit": "0 missing"}
+    assert not tool(client, "finish_run", **{**FINISH, "display": display_v1}).get("isError")
+    assert tool(client, "get_run", run_id="R-1")["structuredContent"]["run"]["display"] == display_v1
+
+    display_v2 = {**display_v1, "blocks": [{"kind": "tables", "badge": "Followup", "tabs": [
+        {"key": "t1", "label": "Tab 1", "title": "Comparison", "heads": ["A", "B"], "rows": [["1", "2"]]}
+    ]}]}
+    assert not tool(client, "attach_run_display", run_id="R-1", display=display_v2).get("isError")
+    assert tool(client, "get_run", run_id="R-1")["structuredContent"]["run"]["display"] == display_v2
+
+    proj = tool(client, "get_project", project_id=PAPER["id"])["structuredContent"]
+    assert proj["project"]["display"]["subtitle"] == "Overview"
+    assert len(proj["configs"]) == 2
+    assert any(c["id"] == "cfg-e1" for c in proj["configs"])
+
+    # Ownership mismatch is rejected
+    other = {"id": "folder:我的论文/Other", "kind": "paper", "title": "Other", "joined": True}
+    panel_change(client, "entities", other).raise_for_status()
+    assert tool(client, "upsert_idea", project_id=other["id"], id="claim-1", question="X")["isError"]
+    assert tool(client, "upsert_config", project_id=other["id"], id="cfg-e1", name="X")["isError"]
