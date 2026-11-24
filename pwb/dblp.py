@@ -155,8 +155,8 @@ def verify_library(store, index_db, log=print, min_index=MIN_INDEX):
             version = {"id": new_id, "kind": "journal" if hit["key"].startswith("journals/") else "proceedings",
                        "label": venue, "url": next((u for u in ee if u.startswith("http")), None), "date": None}
             fixes["versions"] = [version] + [v for v in paper["versions"] if v["id"] != new_id and v["kind"] == "arxiv"]
-            if not paper["urls"].get("source") or "semanticscholar" in (paper["urls"].get("source") or ""):
-                fixes["urls"] = {**paper["urls"], "source": version["url"] or paper["urls"].get("source")}
+            from .paper_links import links_for
+            fixes["urls"] = links_for(paper, official=ee)
             stats["verified" if hit["main"] else "elsewhere"] += 1
         else:
             fixes = {"libraryReason": "（DBLP {} 版里没找到正式发表记录，会议信息仍是 Semantic Scholar 推断的）{}".format(built, base_reason)}
