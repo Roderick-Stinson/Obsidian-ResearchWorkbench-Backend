@@ -1,10 +1,10 @@
 # 论文工作台 · 后端
 
-> A local research-paper workbench backend (FastAPI + SQLite) for an Obsidian dashboard: daily recommendations from arXiv and Hugging Face Daily Papers (screened against your interest keyword tree, skimmed by an LLM), a paper library for your research directions, and summaries of classics, must-reads and field-wide hotspot trends. LLM: local Claude Code / Codex CLI / DeepSeek. Everything about your research directions lives in a config file, not in code. Docs are in Chinese.
+> A local research-paper workbench backend (FastAPI + SQLite) for an Obsidian dashboard: daily recommendations from arXiv and Hugging Face Daily Papers (screened against your interest keyword tree, skimmed by an LLM), a paper library for your research directions, summaries of classics, must-reads and field-wide hotspot trends, and a data-driven experiment workbench with an HTTP JSON-RPC MCP endpoint for coding agents. LLM: local Claude Code / Codex CLI / DeepSeek. Everything about your research directions and experiments lives in config/database files, not in code. Docs are in Chinese.
 
 Obsidian 论文面板的后端服务。面板（前端）在另一个仓库：[Obsidian-ResearchWorkbench-Frontend](https://github.com/Roderick-Stinson/Obsidian-ResearchWorkbench-Frontend)。接口按 `contract/数据格式约定.md` 实现；约定的源头在面板仓库的 `论文工作台/后端约定/`，这里的 `contract/` 是同步过来的副本。
 
-已经能用的：每日推荐（arXiv + Hugging Face 每日论文 → 初筛 → 核心 / 邻近 / 热点三类 → 速读 → 精选和简报，每周新中稿入库）、论文库（领域检索入库、DBLP 核实中稿、批量下载公开 PDF）、我的标记与阅读队列、阅读笔记（面板同步过来，推荐时参考）、作者机构与团队（OpenAlex + PDF 第一页认通讯作者，按机构聚合、关注的人的新论文进推荐）、我的研究领域（关键词树的填写与大模型整理）、经典与必读、领域发展史（含按论文流分开的热点演变）。还没生成的数据接口返回 404，还没实现的后台任务（精读、周报等）会以“尚未实现”失败。
+已经能用的：每日推荐（arXiv + Hugging Face 每日论文 → 初筛 → 核心 / 邻近 / 热点三类 → 速读 → 精选和简报，每周新中稿入库）、论文库（领域检索入库、DBLP 核实中稿、批量下载公开 PDF）、我的标记与阅读队列、阅读笔记（面板同步过来，推荐时参考）、一键精读、周报、作者机构与团队（OpenAlex + PDF 第一页认通讯作者，按机构聚合、关注的人的新论文进推荐）、我的研究领域（关键词树的填写与大模型整理）、经典与必读、领域发展史（含按论文流分开的热点演变），以及数据驱动的实验工作台与给 Coding Agent 接入的 MCP 接口（`POST /api/v1/mcp`）。还没生成的数据接口返回 404，还没实现的后台任务（如 `ingest-paper`）会以“尚未实现”失败。
 
 **不写死**：和你研究方向有关的文字（检索词、方向说明、arXiv 论文流、会议清单）都在 `data/profile.json`；每日推荐怎么跑（时间、来源开关、阈值、上限、权重）在面板“设置 → 每日推荐”；时区用 `PWB_TZ`。
 
@@ -15,6 +15,10 @@ pwb/            代码
   api.py        HTTP 接口（/api/v1）
   store.py      SQLite 存储
   tasks.py      后台任务
+  experiment_desk.py  实验工作台状态与结构化总览/命题/配置/运行存储
+  experiment_mcp.py   实验工作台 HTTP 接口与 JSON-RPC MCP 入口（/api/v1/mcp）
+  deepread.py   一键精读：读 PDF 全文并生成带原文摘录核对的精读笔记
+  report.py     每周 / 每月研究进展报告生成
   interests.py  研究兴趣关键词树的编辑与合并
   llm.py        可切换的大模型引擎（Claude Code / Codex CLI / DeepSeek API）
   rebuild.py    “重新整理关键词”任务：读论文原文 → 调用引擎 → 核对摘录 → 合并
@@ -24,20 +28,24 @@ pwb/            代码
   notes.py      阅读笔记：同步、要追的论文进队列、阅读要点和候选关键词
   authors.py    作者机构：OpenAlex、PDF 第一页、中文机构名；团队聚合；关注的人
   survey.py     领域检索入库：Semantic Scholar 抓候选 → 大模型按标题、摘要筛选 → 写进论文库
+  paper_links.py 出版方 / 开放获取链接规范化与补全
   pdfmeta.py    从 PDF 第一页读标题
   dblp.py       用 DBLP 整库核实“待核实”论文是否中稿
   pdfs.py       批量下载论文库的 PDF（只用公开来源）
   landscape.py  经典与必读、领域发展史（参考文献统计 + 大模型整理）
   feed.py       arXiv 论文流（按 profile.json 的 streams，每个流各取各的）
   hotspots.py   热点演变（每个论文流的词组占比统计 + 大模型归类）
+  schemes.py    研究路线 / 方案归类整理
+  summarize.py  论文摘要与速读生成
   service.py    开机自启（macOS launchd / Linux systemd）
   migrate.py    启动时把旧格式的数据改成新格式
   jobs.py       后台长任务（PDF 下载、DBLP 核实）的进度
   importer.py   从 vault 一次性导入论文条目和 PDF
   seed.py       写入约定里的示例数据
+skills/         给外部 Agent 使用的 Skill（含 paper-workbench 实验交接指南）
 contract/       约定副本：schemas、examples、validate.py
 tools/          生成 schemas 和 examples 的脚本（改约定时用）
-tests/          契约测试：每个接口的返回体都按 schema 校验
+tests/          契约与功能测试（含实验工作台 MCP 测试）
 data/           数据（不进版本库）：workbench.sqlite3、pdfs/、profile.json（你的研究方向）、cache/（每日速读下的 PDF）
 profile.example.json  研究方向配置的示例
 ```
@@ -176,7 +184,7 @@ PWB_DATA_DIR=data-demo PWB_PORT=8766 .venv/bin/python -m pwb serve
 面板“报告”页的“生成本周周报”提交任务 `generate-report`（`type` 为 `weekly` 或 `monthly`），生成两部分：
 
 1. **研究领域进展**：取这段时间每日简报里的精选论文和新中稿，连同你的研究方向交给大模型归纳成总览和几个主题。每个结论都带引用，只能引用给它的材料，引用对不上的丢掉。
-2. **我做了什么**：不让大模型写，只统计后端有记录的：阅读笔记、打分、标记、生成的精读。实验记录和 `我的论文/` 里的内容不在后端，不统计也不上传。
+2. **我做了什么**：不让大模型写，只统计后端有记录的阅读笔记、打分、标记和生成的精读。实验工作台记录和本地 `我的论文/` 文稿不计入该统计，也不会传给周报大模型。
 
 生成的报告存成 `GET /reports/{id}`（`weekly-<周一日期>` 或 `monthly-<YYYY-MM>`）。
 
@@ -306,6 +314,25 @@ nohup tools/dblp_update.sh > data/dblp/update.log 2>&1 &
 
 核实结果：在目标会议 / 期刊的主会里找到的改为“已发表”，会议和年份以 DBLP 为准，主 ID 换成 DBLP 正式编号（旧 ID 留作别名）；只在 Findings / Workshop 里找到的标“不属于检索范围”；没找到的保持“待核实”。
 
+## 实验工作台与 MCP 交接
+
+实验工作台采用前后端解耦的数据驱动设计：仓库代码完全通用，每篇论文的研究问题、验证命题、实验方案、运行结果与结构化表格都存在本地 SQLite（`workbench.sqlite3` 的 `experiment-desk-v1`）里，既可以在 Obsidian 面板手工编辑，也可以由做实验的 Coding Agent（如 Codex CLI / Claude Code）通过 MCP 自动汇报同步。
+
+- **REST 接口**（供 Obsidian 面板使用）：
+  - `GET /api/v1/experiment-desk`：读取完整实验台数据；
+  - `GET /api/v1/experiment-desk/revision`：轻量查询递增版本号（面板据此无闪烁局部更新）；
+  - `POST /api/v1/experiment-desk/changes`：提交面板端编辑增量（带基线版本乐观锁与冲突检查）。
+- **HTTP JSON-RPC MCP 接口**（`POST /api/v1/mcp`，配套指南见 `skills/paper-workbench/SKILL.md`）：
+  - **读取与查询**：`list_projects`、`get_project`（返回论文实体、命题与配置）、`list_runs`、`get_run`；
+  - **实验生命周期**：`start_run`（登记运行与启动参数）、`finish_run`（写回 `finished`/`failed`、指标与可选 `display`）；
+  - **结构化工作台维护**：
+    - `update_project_overview`：更新 `entity.display`（研究范围、总判断、基准说明、待办顺序提示等）；
+    - `upsert_idea`：创建/更新 `rq`、`claim` 或 `todo`（支持验证路线图 `step`、`short`、`goal`、`gap`、`needs`、关联 `exps` 及优先级/行动项）；
+    - `upsert_config`：创建/更新实验配置，支持按 `expCode` 和 `phase`（`formal` / `pilot` / `baseline` / `plan` / `archive`）分组并附带设计指南 `guide`；
+    - `attach_run_display`：向已完成运行挂载或刷新 `display`（摘要对比行 `summaryRows`、矩阵 `matrix` 与跟进消融表 `tables`/`table`）。
+
+如果你的实验需要额外的专属动态 SVG 图解，可在本地 Vault 放置自定义扩展脚本 `论文工作台/面板组件/exp-custom.js`（详见前端仓库 README），后端与 Git 仓库均不存储任何具体论文的私有记录。
+
 ## 修改约定
 
 1. 改 `tools/gen_schemas.py`（schema 的源头）和 `tools/gen_examples.py`，生成到 vault：
@@ -317,9 +344,9 @@ nohup tools/dblp_update.sh > data/dblp/update.log 2>&1 &
 
 ## 还没做的
 
-- 流水线里还没做的：AI 精读草稿、结果表、按论文增长提候选关键词（笔记提的已经有了）、研究线、社区热点、报告、推送（Telegram 等）。DBLP 核实还要定期手动用新的月度存档跑 dblp-index / dblp-verify。
-- 任务：`deep-read`、`generate-report`、`ingest-paper` 还没实现（面板上显示“即将上线”）。
-- GPU 服务器上的实验守护进程（向 `inbox` 上报运行记录）。
+- 流水线里还没完善的：按论文增长自动提候选关键词（从阅读笔记提取的已有）、推送（Telegram 等）。DBLP 核实还要定期手动用新的月度存档跑 dblp-index / dblp-verify。
+- 任务：`ingest-paper` 还没实现（面板上显示“即将上线”）。
+- 通用 `/api/v1/inbox` GPU 守护进程自动汇报接口（当前编码 Agent 推荐直接使用 `POST /api/v1/mcp`）。
 
 ## 许可证
 
